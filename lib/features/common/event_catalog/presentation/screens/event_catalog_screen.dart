@@ -60,7 +60,7 @@ class _EventCatalogScreenState extends State<EventCatalogScreen> {
                 return ListView.builder(
                   itemCount: events.length,
                   itemBuilder: (context, index) =>
-                      EventCard(event: events[index]),
+                      EventCard(event: events[index], onTap: () {  },),
                 );
               },
             ),

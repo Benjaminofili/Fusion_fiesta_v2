@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:fusion_fiesta/features/common/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_roles.dart';
@@ -45,6 +46,10 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.register,
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.forgotPassword,
+        builder: (context, state) => const ForgotPasswordScreen(),
       ),
       GoRoute(
         path: AppRoutes.roleUpgrade,
@@ -103,7 +108,8 @@ class AppRouter {
     // Added AppRoutes.register to this list so users can sign up!
     if (location == AppRoutes.splash ||
         location == AppRoutes.onboarding ||
-        location == AppRoutes.register) {
+        location == AppRoutes.register ||
+        location == AppRoutes.forgotPassword) {
       return null;
     }
 
