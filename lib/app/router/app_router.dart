@@ -92,21 +92,35 @@ class AppRouter {
 
   FutureOr<String?> _resolveRedirect(
       BuildContext context, GoRouterState state) async {
-    final user = await _authService.currentUser;
     final location = state.uri.toString();
+
+    // 1. EXCEPTION: Allow Splash (and Onboarding) to render without checks.
+    // This lets the SplashScreen widget mount and run its own logic.
+    if (location == AppRoutes.splash || location == AppRoutes.onboarding) {
+      return null;
+    }
+
+    final user = await _authService.currentUser;
     final loggingIn = location == AppRoutes.login;
+
+    // 2. Guard protected routes: Force login if no user
     if (user == null && !loggingIn) {
       return AppRoutes.login;
     }
+
+    // 3. Redirect logged-in users away from Login page
     if (user != null && loggingIn) {
       return AppRoutes.main;
     }
+
+    // 4. Role upgrade guard
     if (user != null &&
         user.role == AppRole.visitor &&
         !user.profileCompleted &&
         location != AppRoutes.roleUpgrade) {
       return AppRoutes.roleUpgrade;
     }
+
     return null;
   }
 }

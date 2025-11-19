@@ -1,0 +1,27 @@
+## This file configures the native splash screen that appears on app launch.
+## After modifying this file, run: dart run flutter_native_splash:create
+#
+#flutter_native_splash:
+#  # This is your light theme background color
+#  color: "#FFFFFF"
+#
+#  # This is your dark theme background color
+#  color_dark: "#121212"
+#
+#  # The path to your logo asset.
+#  # !!! IMPORTANT: You must add this file to your project.
+#  image: assets/images/logo.png
+#
+#  # (Optional) A different logo for dark mode.
+#  # image_dark: assets/images/logo_dark.png
+#
+#  # Android 12 (and higher) configuration
+#  android_12:
+#    image: assets/images/logo.png
+#    color: "#FFFFFF"
+#    color_dark: "#121212"
+#
+#  # iOS configuration
+#  ios:
+#    # Set to 'false' if you want to show the logo on iOS.
+#    branding: false
