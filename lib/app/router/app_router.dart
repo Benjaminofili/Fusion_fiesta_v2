@@ -1,17 +1,21 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:fusion_fiesta/features/common/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_roles.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/services/auth_service.dart';
 import '../../data/models/event.dart';
+
+// --- Auth Screens ---
 import '../../features/common/auth/presentation/screens/login_screen.dart';
 import '../../features/common/auth/presentation/screens/register_screen.dart';
 import '../../features/common/auth/presentation/screens/role_upgrade_screen.dart';
 import '../../features/common/auth/presentation/screens/splash_screen.dart';
+import '../../features/common/auth/presentation/screens/forgot_password_screen.dart';
+
+// --- Common Screens ---
 import '../../features/common/event_catalog/presentation/screens/event_catalog_screen.dart';
 import '../../features/common/event_catalog/presentation/screens/event_detail_screen.dart';
 import '../../features/common/gallery/presentation/screens/gallery_screen.dart';
@@ -21,6 +25,12 @@ import '../../features/common/information/presentation/screens/faq_screen.dart';
 import '../../features/common/information/presentation/screens/sitemap_screen.dart';
 import '../../features/common/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/common/profile/presentation/screens/profile_screen.dart';
+
+// --- Student Screens (NEW) ---
+import '../../features/student/registered_events/presentation/screens/registered_events_screen.dart';
+import '../../features/student/certificates/presentation/screens/certificates_screen.dart';
+import '../../features/student/feedback/presentation/screens/feedback_form_screen.dart';
+
 import 'main_navigation_shell.dart';
 
 class AppRouter {
@@ -31,6 +41,7 @@ class AppRouter {
   late final GoRouter router = GoRouter(
     initialLocation: AppRoutes.splash,
     routes: [
+      // --- STARTUP & AUTH ---
       GoRoute(
         path: AppRoutes.splash,
         builder: (context, state) => const SplashScreen(),
@@ -55,10 +66,14 @@ class AppRouter {
         path: AppRoutes.roleUpgrade,
         builder: (context, state) => const RoleUpgradeScreen(),
       ),
+
+      // --- MAIN SHELL (Dashboard) ---
       GoRoute(
         path: AppRoutes.main,
         builder: (context, state) => const MainNavigationShell(),
       ),
+
+      // --- EVENTS ---
       GoRoute(
         path: AppRoutes.events,
         builder: (context, state) => const EventCatalogScreen(),
@@ -72,6 +87,22 @@ class AppRouter {
           ),
         ],
       ),
+
+      // --- STUDENT FEATURES (NEW) ---
+      GoRoute(
+        path: AppRoutes.registeredEvents,
+        builder: (context, state) => const RegisteredEventsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.certificates,
+        builder: (context, state) => const CertificatesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.feedback,
+        builder: (context, state) => const FeedbackFormScreen(),
+      ),
+
+      // --- COMMON FEATURES ---
       GoRoute(
         path: AppRoutes.gallery,
         builder: (context, state) => GalleryScreen(),
@@ -105,7 +136,6 @@ class AppRouter {
     final location = state.uri.toString();
 
     // 1. PUBLIC ROUTES: Allow access without login
-    // Added AppRoutes.register to this list so users can sign up!
     if (location == AppRoutes.splash ||
         location == AppRoutes.onboarding ||
         location == AppRoutes.register ||
@@ -117,7 +147,6 @@ class AppRouter {
     final loggingIn = location == AppRoutes.login;
 
     // 2. Guard protected routes: Force login if no user
-    // If user is NULL and they are NOT on the login page, send them to login
     if (user == null && !loggingIn) {
       return AppRoutes.login;
     }
