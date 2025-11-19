@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../app/di/service_locator.dart';
+import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_roles.dart';
 import '../../core/services/auth_service.dart';
-import '../../data/models/user.dart';
 import '../../features/admin/dashboard/presentation/screens/admin_dashboard_screen.dart';
-import '../../features/admin/reports/presentation/screens/reports_screen.dart';
 import '../../features/common/event_catalog/presentation/screens/event_catalog_screen.dart';
 import '../../features/common/gallery/presentation/screens/gallery_screen.dart';
-import '../../features/common/information/presentation/screens/about_screen.dart';
 import '../../features/common/profile/presentation/screens/profile_screen.dart';
 import '../../features/organizer/dashboard/presentation/screens/organizer_dashboard_screen.dart';
 import '../../features/student/dashboard/presentation/screens/student_dashboard_screen.dart';
@@ -22,112 +22,152 @@ class MainNavigationShell extends StatefulWidget {
 
 class _MainNavigationShellState extends State<MainNavigationShell> {
   final AuthService _authService = serviceLocator<AuthService>();
-  User? _user;
-  int _index = 0;
+  int _selectedIndex = 0;
+
+  // To store the role after async check
+  AppRole? _userRole;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadUser();
+    _loadUserRole();
   }
 
-  Future<void> _loadUser() async {
-    final current = await _authService.currentUser ??
-        const User(
-            id: 'guest',
-            name: 'Guest',
-            email: 'guest@fusionfiesta.dev',
-            role: AppRole.visitor);
+  Future<void> _loadUserRole() async {
+    final user = await _authService.currentUser;
     if (mounted) {
-      setState(() => _user = current);
+      setState(() {
+        _userRole = user?.role ?? AppRole.visitor;
+        _loading = false;
+      });
     }
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_user == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      );
     }
 
-    final destinations = _buildDestinations();
+    // 1. Define Tabs based on Role
+    final tabs = _getTabsForRole(_userRole!);
+
+    // 2. Define Pages based on Role
+    final pages = _getPagesForRole(_userRole!);
+
     return Scaffold(
-      body: destinations[_index].builder(),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (value) => setState(() => _index = value),
-        destinations: destinations
-            .map(
-              (destination) => NavigationDestination(
-                icon: Icon(destination.icon),
-                label: destination.label,
-              ),
-            )
-            .toList(),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: pages,
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: NavigationBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: _onItemTapped,
+          backgroundColor: Colors.white,
+          indicatorColor: AppColors.primary.withOpacity(0.15),
+          surfaceTintColor: Colors.white,
+          destinations: tabs.map((tab) {
+            return NavigationDestination(
+              icon: Icon(tab.icon, color: AppColors.textSecondary),
+              selectedIcon: Icon(tab.activeIcon, color: AppColors.primary),
+              label: tab.label,
+            );
+          }).toList(),
+        ),
       ),
     );
   }
 
-  List<_Destination> _buildDestinations() {
-    final list = <_Destination>[
-      _Destination(
-          label: 'Events',
-          icon: Icons.event,
-          builder: () => const EventCatalogScreen()),
-      _Destination(
-          label: 'Gallery', icon: Icons.photo, builder: () => GalleryScreen()),
-      _Destination(
-          label: 'Profile',
-          icon: Icons.person,
-          builder: () => const ProfileScreen()),
-    ];
+  // --- HELPER: DEFINE TABS PER ROLE ---
+  List<_NavTab> _getTabsForRole(AppRole role) {
+    switch (role) {
+      case AppRole.admin:
+        return const [
+          _NavTab(icon: Icons.dashboard_outlined, activeIcon: Icons.dashboard, label: 'Overview'),
+          _NavTab(icon: Icons.people_outline, activeIcon: Icons.people, label: 'Users'),
+          _NavTab(icon: Icons.analytics_outlined, activeIcon: Icons.analytics, label: 'Reports'),
+          _NavTab(icon: Icons.person_outline, activeIcon: Icons.person, label: 'Profile'),
+        ];
 
-    switch (_user!.role) {
+      case AppRole.organizer:
+        return const [
+          _NavTab(icon: Icons.dashboard_outlined, activeIcon: Icons.dashboard, label: 'Manage'),
+          _NavTab(icon: Icons.event_outlined, activeIcon: Icons.event, label: 'My Events'),
+          _NavTab(icon: Icons.qr_code_scanner, activeIcon: Icons.qr_code, label: 'Scan'),
+          _NavTab(icon: Icons.person_outline, activeIcon: Icons.person, label: 'Profile'),
+        ];
+
       case AppRole.student:
       case AppRole.visitor:
-        list.insert(
-            0,
-            _Destination(
-                label: 'Dashboard',
-                icon: Icons.dashboard,
-                builder: () => StudentDashboardScreen()));
-        break;
-      case AppRole.organizer:
-        list.insert(
-            0,
-            const _Destination(
-                label: 'Dashboard',
-                icon: Icons.dashboard,
-                builder: OrganizerDashboardScreen.new));
-        break;
-      case AppRole.admin:
-        list
-          ..insert(
-              0,
-              const _Destination(
-                  label: 'Dashboard',
-                  icon: Icons.dashboard,
-                  builder: AdminDashboardScreen.new))
-          ..add(const _Destination(
-              label: 'Reports',
-              icon: Icons.insert_chart,
-              builder: ReportsScreen.new));
-        break;
+      default:
+        return const [
+          _NavTab(icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Home'),
+          _NavTab(icon: Icons.calendar_month_outlined, activeIcon: Icons.calendar_month, label: 'Events'),
+          _NavTab(icon: Icons.photo_library_outlined, activeIcon: Icons.photo_library, label: 'Gallery'),
+          _NavTab(icon: Icons.person_outline, activeIcon: Icons.person, label: 'Profile'),
+        ];
     }
+  }
 
-    list.add(const _Destination(
-        label: 'About', icon: Icons.info_outline, builder: AboutScreen.new));
-    return list;
+  // --- HELPER: DEFINE SCREENS PER ROLE ---
+  List<Widget> _getPagesForRole(AppRole role) {
+    switch (role) {
+      case AppRole.admin:
+        return [
+          AdminDashboardScreen(),
+          const Center(child: Text("User Management")), // Placeholder
+          const Center(child: Text("Reports")),        // Placeholder
+          const ProfileScreen(),
+        ];
+
+      case AppRole.organizer:
+        return [
+          OrganizerDashboardScreen(),
+          const Center(child: Text("My Events")),      // Placeholder
+          const Center(child: Text("QR Scanner")),     // Placeholder
+          const ProfileScreen(),
+        ];
+
+      case AppRole.student:
+      case AppRole.visitor:
+      default:
+        return [
+          StudentDashboardScreen(), // We will polish this next!
+          const EventCatalogScreen(),
+          GalleryScreen(),
+          const ProfileScreen(),
+        ];
+    }
   }
 }
 
-class _Destination {
-  const _Destination({
-    required this.label,
-    required this.icon,
-    required this.builder,
-  });
-
-  final String label;
+class _NavTab {
   final IconData icon;
-  final Widget Function() builder;
+  final IconData activeIcon;
+  final String label;
+
+  const _NavTab({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+  });
 }

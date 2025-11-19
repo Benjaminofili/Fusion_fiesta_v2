@@ -8,6 +8,7 @@ import '../../core/constants/app_routes.dart';
 import '../../core/services/auth_service.dart';
 import '../../data/models/event.dart';
 import '../../features/common/auth/presentation/screens/login_screen.dart';
+import '../../features/common/auth/presentation/screens/register_screen.dart';
 import '../../features/common/auth/presentation/screens/role_upgrade_screen.dart';
 import '../../features/common/auth/presentation/screens/splash_screen.dart';
 import '../../features/common/event_catalog/presentation/screens/event_catalog_screen.dart';
@@ -34,8 +35,16 @@ class AppRouter {
         builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(
+        path: AppRoutes.onboarding,
+        builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.login,
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.register,
+        builder: (context, state) => const RegisterScreen(),
       ),
       GoRoute(
         path: AppRoutes.roleUpgrade,
@@ -82,10 +91,6 @@ class AppRouter {
         path: AppRoutes.sitemap,
         builder: (context, state) => const SitemapScreen(),
       ),
-      GoRoute(
-        path: AppRoutes.onboarding,
-        builder: (context, state) => const OnboardingScreen(),
-      ),
     ],
     redirect: _resolveRedirect,
   );
@@ -94,9 +99,11 @@ class AppRouter {
       BuildContext context, GoRouterState state) async {
     final location = state.uri.toString();
 
-    // 1. EXCEPTION: Allow Splash (and Onboarding) to render without checks.
-    // This lets the SplashScreen widget mount and run its own logic.
-    if (location == AppRoutes.splash || location == AppRoutes.onboarding) {
+    // 1. PUBLIC ROUTES: Allow access without login
+    // Added AppRoutes.register to this list so users can sign up!
+    if (location == AppRoutes.splash ||
+        location == AppRoutes.onboarding ||
+        location == AppRoutes.register) {
       return null;
     }
 
@@ -104,6 +111,7 @@ class AppRouter {
     final loggingIn = location == AppRoutes.login;
 
     // 2. Guard protected routes: Force login if no user
+    // If user is NULL and they are NOT on the login page, send them to login
     if (user == null && !loggingIn) {
       return AppRoutes.login;
     }

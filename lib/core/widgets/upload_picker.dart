@@ -13,41 +13,68 @@ class UploadPicker extends StatelessWidget {
     required this.allowedExtensions,
     required this.onFileSelected,
     this.icon = Icons.upload_file,
+    this.customChild, // <--- NEW: Allow custom UI
   });
 
   final String label;
   final List<String> allowedExtensions;
   final UploadPickerCallback onFileSelected;
   final IconData icon;
+  final Widget? customChild; // <--- NEW
 
   Future<void> _pickFile(BuildContext context) async {
-    if (allowedExtensions.contains('jpg') ||
-        allowedExtensions.contains('png')) {
-      final imagePicker = ImagePicker();
-      final file = await imagePicker.pickImage(source: ImageSource.gallery);
-      if (file != null) {
-        onFileSelected(
-          PlatformFile(
-            path: file.path,
-            name: file.name,
-            size: await file.length(),
-          ),
-        );
-      }
-      return;
-    }
+    try {
+      // 1. Handle Images (Gallery)
+      if (allowedExtensions.contains('jpg') ||
+          allowedExtensions.contains('png') ||
+          allowedExtensions.contains('jpeg')) {
 
-    final result = await FilePicker.platform.pickFiles(
-      allowedExtensions: allowedExtensions,
-      type: FileType.custom,
-    );
-    if (result != null && result.files.isNotEmpty) {
-      onFileSelected(result.files.first);
+        final imagePicker = ImagePicker();
+        final file = await imagePicker.pickImage(source: ImageSource.gallery);
+
+        if (file != null) {
+          onFileSelected(
+            PlatformFile(
+              path: file.path,
+              name: file.name,
+              size: await file.length(),
+            ),
+          );
+        }
+        return;
+      }
+
+      // 2. Handle Documents (File Picker)
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: allowedExtensions,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        // Ensure path is not null (can happen on web, but we are mobile focused)
+        if (result.files.first.path != null) {
+          onFileSelected(result.files.first);
+        }
+      }
+    } catch (e) {
+      // Simple error handling
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick file: $e')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // CASE A: Custom UI (Like your Avatar or ID Tile)
+    if (customChild != null) {
+      return GestureDetector(
+        onTap: () => _pickFile(context),
+        child: customChild,
+      );
+    }
+
+    // CASE B: Default UI (Standard Button)
     return OutlinedButton.icon(
       onPressed: () => _pickFile(context),
       icon: Icon(icon),
@@ -58,4 +85,3 @@ class UploadPicker extends StatelessWidget {
     );
   }
 }
-

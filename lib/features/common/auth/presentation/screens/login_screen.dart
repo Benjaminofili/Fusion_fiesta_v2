@@ -17,8 +17,11 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
+
+  // Pre-filled for testing convenience (remove before launch)
   final _emailController = TextEditingController(text: 'student@fusionfiesta.dev');
   final _passwordController = TextEditingController(text: 'password');
+
   final AuthService _authService = serviceLocator<AuthService>();
 
   bool _isLoading = false;
@@ -39,12 +42,15 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await _authService.signIn(_emailController.text, _passwordController.text);
       if (!mounted) return;
+      // Navigation is handled by the router redirect,
+      // but we explicitly go to main just in case.
       context.go(AppRoutes.main);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Login Failed: ${e.toString()}'),
-          backgroundColor: AppColors.error, // Using your error color
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     } finally {
@@ -55,11 +61,11 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background, // Using your background color
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSizes.lg),
+            padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
               child: Form(
@@ -70,28 +76,28 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     // --- 1. LOGO & HEADER ---
                     const SizedBox(height: 20),
-                    // Try to load logo, fallback to Icon if missing
                     Hero(
                       tag: 'app_logo',
                       child: SizedBox(
-                        height: 100,
+                        height: 160,
                         child: Image.asset(
-                          'assets/images/logo.png', // Ensure this file exists
+                          'assets/images/logo.webp', // Ensure you have this file
+                          fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) => const Icon(
                             FontAwesomeIcons.graduationCap,
-                            size: 80,
+                            size: 100,
                             color: AppColors.primary,
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
                     Text(
                       'Welcome Back!',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary, // Using your text color
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -102,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: AppColors.textSecondary,
                       ),
                     ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 48),
 
                     // --- 2. EMAIL FIELD ---
                     TextFormField(
@@ -114,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         hintText: 'Enter your college email',
                         prefixIcon: const Icon(Icons.email_outlined, color: AppColors.textSecondary),
                         filled: true,
-                        fillColor: AppColors.surface,
+                        fillColor: Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(color: AppColors.border),
@@ -148,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
                         ),
                         filled: true,
-                        fillColor: AppColors.surface,
+                        fillColor: Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(color: AppColors.border),
@@ -170,12 +176,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () {
-                          // TODO: Navigate to Forgot Password Screen
+                          // Placeholder for future "Forgot Password" logic
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Forgot Password feature coming soon')),
+                            const SnackBar(content: Text('Reset password feature coming soon')),
                           );
                         },
-                        child: Text(
+                        child: const Text(
                           'Forgot Password?',
                           style: TextStyle(
                             color: AppColors.primary,
@@ -192,10 +198,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: FilledButton(
                         onPressed: _isLoading ? null : _login,
                         style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.primary, // Your primary brand color
+                          backgroundColor: AppColors.primary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
+                          elevation: 2,
                         ),
                         child: _isLoading
                             ? const CircularProgressIndicator(color: Colors.white)
@@ -216,15 +223,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: TextStyle(color: AppColors.textSecondary),
                         ),
                         GestureDetector(
-                          onTap: () {
-                            // TODO: Navigate to Register Screen
-                            // Since we don't have a Register route yet,
-                            // we can point to RoleUpgrade as a placeholder or show message
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Registration feature coming soon')),
-                            );
-                          },
-                          child: Text(
+                          onTap: () => context.push(AppRoutes.register), // <--- Navigation
+                          child: const Text(
                             'Register',
                             style: TextStyle(
                               color: AppColors.primary,
