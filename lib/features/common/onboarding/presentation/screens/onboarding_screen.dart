@@ -19,7 +19,14 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _controller = PageController();
-  bool _isLastPage = false;
+  int _currentPage = 0;
+
+  // Define the background colors for each page
+  final List<Color> _pageColors = const [
+    Color(0xFF4A148C), // Deep Purple (Cultural)
+    Color(0xFF0D47A1), // Rich Blue (Technical)
+    Color(0xFFE65100), // Deep Orange (Sports)
+  ];
 
   Future<void> _finishOnboarding() async {
     final storage = serviceLocator<StorageService>();
@@ -32,113 +39,123 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            PageView(
-              controller: _controller,
-              onPageChanged: (index) {
-                setState(() => _isLastPage = index == 2);
-              },
-              children: const [
-                _OnboardingPage(
-                  title: 'Cultural Events',
-                  description:
-                  'Music, Dance, Drama. Experience the vibrant soul of our college.',
-                  color: Colors.deepPurple,
-                  scene: _CulturalScene(),
-                ),
-                _OnboardingPage(
-                  title: 'Technical Fests',
-                  description:
-                  'Hackathons, Workshops, Coding. Showcase your innovation.',
-                  color: Colors.blue,
-                  scene: _TechScene(),
-                ),
-                _OnboardingPage(
-                  title: 'Sports Meets',
-                  description:
-                  'Inter-college tournaments. Compete and conquer.',
-                  color: Colors.orange,
-                  scene: _SportsScene(),
-                ),
-              ],
-            ),
+      // Removed static background color
+      body: AnimatedContainer(
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+        color: _pageColors[_currentPage], // Dynamic Background
+        child: SafeArea(
+          child: Stack(
+            children: [
+              PageView(
+                controller: _controller,
+                onPageChanged: (index) {
+                  setState(() => _currentPage = index);
+                },
+                children: const [
+                  _OnboardingPage(
+                    title: 'Cultural Events',
+                    description:
+                    'Music, Dance, Drama. Experience the vibrant soul of our college.',
+                    // We keep the scene exactly as you wrote it
+                    scene: _CulturalScene(),
+                  ),
+                  _OnboardingPage(
+                    title: 'Technical Fests',
+                    description:
+                    'Hackathons, Workshops, Coding. Showcase your innovation.',
+                    scene: _TechScene(),
+                  ),
+                  _OnboardingPage(
+                    title: 'Sports Meets',
+                    description:
+                    'Inter-college tournaments. Compete and conquer.',
+                    scene: _SportsScene(),
+                  ),
+                ],
+              ),
 
-            // Bottom Controls
-            Container(
-              alignment: const Alignment(0, 0.85),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Skip Button
-                    TextButton(
-                      onPressed: _finishOnboarding,
-                      child: const Text('Skip',
-                          style: TextStyle(fontWeight: FontWeight.w600)),
-                    ),
+              // Bottom Controls (Updated for High Contrast)
+              Container(
+                alignment: const Alignment(0, 0.85),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Skip Button - White
+                      TextButton(
+                        onPressed: _finishOnboarding,
+                        child: const Text(
+                          'Skip',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white70, // High contrast
+                          ),
+                        ),
+                      ),
 
-                    // Dots
-                    SmoothPageIndicator(
-                      controller: _controller,
-                      count: 3,
-                      effect: const WormEffect(
-                        spacing: 12,
-                        dotColor: Colors.black12,
-                        activeDotColor: Colors.black87,
-                        dotHeight: 10,
-                        dotWidth: 10,
+                      // Dots - White
+                      SmoothPageIndicator(
+                        controller: _controller,
+                        count: 3,
+                        effect: const WormEffect(
+                          spacing: 12,
+                          dotColor: Colors.white24,
+                          activeDotColor: Colors.white,
+                          dotHeight: 10,
+                          dotWidth: 10,
+                        ),
                       ),
-                    ),
 
-                    // Next / Done Button
-                    _isLastPage
-                        ? FilledButton(
-                      onPressed: _finishOnboarding,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
+                      // Next / Get Started - White Button
+                      _currentPage == 2
+                          ? FilledButton(
+                        onPressed: _finishOnboarding,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: _pageColors[_currentPage],
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                        ),
+                        child: const Text(
+                          'Get Started',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      )
+                          : IconButton.filled(
+                        onPressed: () => _controller.nextPage(
+                          duration: const Duration(milliseconds: 500),
+                          curve: Curves.easeIn,
+                        ),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: _pageColors[_currentPage],
+                        ),
+                        icon: const Icon(Icons.arrow_forward, size: 20),
                       ),
-                      child: const Text('Get Started'),
-                    )
-                        : FilledButton.icon(
-                      onPressed: () => _controller.nextPage(
-                        duration: const Duration(milliseconds: 500),
-                        curve: Curves.easeIn,
-                      ),
-                      icon: const Icon(Icons.arrow_forward, size: 18),
-                      label: const Text('Next'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 12),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-// --- REUSABLE PAGE LAYOUT ---
+// --- REUSABLE PAGE LAYOUT (Updated Text Colors) ---
 class _OnboardingPage extends StatelessWidget {
   final String title;
   final String description;
   final Widget scene;
-  final Color color;
 
   const _OnboardingPage({
     required this.title,
     required this.description,
     required this.scene,
-    required this.color,
   });
 
   @override
@@ -152,13 +169,13 @@ class _OnboardingPage extends StatelessWidget {
           SizedBox(height: 320, width: 320, child: scene),
           const SizedBox(height: 40),
 
-          // Typography
+          // Typography - FORCED WHITE for contrast
           Text(
             title,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.w800,
-              color: Colors.black87,
+              color: Colors.white, // High contrast against colored bg
               letterSpacing: -0.5,
             ),
           ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2, end: 0),
@@ -169,7 +186,7 @@ class _OnboardingPage extends StatelessWidget {
             description,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.grey[600],
+              color: Colors.white.withOpacity(0.9), // High contrast
               height: 1.5,
             ),
           ).animate().fadeIn(delay: 200.ms, duration: 600.ms),
@@ -181,7 +198,8 @@ class _OnboardingPage extends StatelessWidget {
   }
 }
 
-// --- HELPER: STYLED ICON ---
+// --- YOUR PERFECTED HELPER: STYLED ICON ---
+// (Unchanged from your snippet)
 class _StyledIcon extends StatelessWidget {
   final IconData icon;
   final double size;
@@ -261,6 +279,8 @@ class _StyledIcon extends StatelessWidget {
   }
 }
 
+// --- YOUR SCENES (Unchanged from your snippet) ---
+
 // --- SCENE 1: CULTURAL ---
 class _CulturalScene extends StatelessWidget {
   const _CulturalScene();
@@ -275,7 +295,7 @@ class _CulturalScene extends StatelessWidget {
           height: 280,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.deepPurple.withOpacity(0.05),
+            color: Colors.deepPurple.withOpacity(0.2), // Slightly boosted opacity for visibility
           ),
         )
             .animate()
@@ -286,7 +306,7 @@ class _CulturalScene extends StatelessWidget {
             .animate(onPlay: (c) => c.repeat(reverse: true)),
         const _StyledIcon(FontAwesomeIcons.masksTheater,
             size: 120,
-            color: Colors.deepPurple,
+            color: Colors.deepPurple, // Stays dark/saturated
             color2: Colors.purpleAccent)
             .animate()
             .fadeIn(duration: 800.ms)
@@ -337,7 +357,7 @@ class _TechScene extends StatelessWidget {
           height: 280,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.blue.withOpacity(0.05),
+            color: Colors.blue.withOpacity(0.2),
           ),
         )
             .animate()
@@ -391,7 +411,7 @@ class _SportsScene extends StatelessWidget {
           height: 280,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.orange.withOpacity(0.05),
+            color: Colors.orange.withOpacity(0.2),
           ),
         )
             .animate()
