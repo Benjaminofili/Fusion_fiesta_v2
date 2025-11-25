@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+// import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // Optional if you use FA icons
 
 import '../../app/di/service_locator.dart';
 import '../../core/constants/app_colors.dart';
@@ -24,7 +24,6 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
   final AuthService _authService = serviceLocator<AuthService>();
   int _selectedIndex = 0;
 
-  // To store the role after async check
   AppRole? _userRole;
   bool _loading = true;
 
@@ -63,6 +62,11 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
 
     // 2. Define Pages based on Role
     final pages = _getPagesForRole(_userRole!);
+
+    // Safety check: ensure index is valid if tabs changed
+    if (_selectedIndex >= tabs.length) {
+      _selectedIndex = 0;
+    }
 
     return Scaffold(
       body: IndexedStack(
@@ -117,11 +121,19 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         ];
 
       case AppRole.student:
-      case AppRole.visitor:
-      default:
+      // Participant gets the Full Dashboard
         return const [
           _NavTab(icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Home'),
           _NavTab(icon: Icons.calendar_month_outlined, activeIcon: Icons.calendar_month, label: 'Events'),
+          _NavTab(icon: Icons.photo_library_outlined, activeIcon: Icons.photo_library, label: 'Gallery'),
+          _NavTab(icon: Icons.person_outline, activeIcon: Icons.person, label: 'Profile'),
+        ];
+
+      case AppRole.visitor:
+      default:
+      // Visitor gets limited tabs (No Dashboard)
+        return const [
+          _NavTab(icon: Icons.calendar_month_outlined, activeIcon: Icons.calendar_month, label: 'Events'), // Home is Catalog
           _NavTab(icon: Icons.photo_library_outlined, activeIcon: Icons.photo_library, label: 'Gallery'),
           _NavTab(icon: Icons.person_outline, activeIcon: Icons.person, label: 'Profile'),
         ];
@@ -133,25 +145,32 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
     switch (role) {
       case AppRole.admin:
         return [
-          AdminDashboardScreen(),
-          const Center(child: Text("User Management")), // Placeholder
-          const Center(child: Text("Reports")),        // Placeholder
+          const AdminDashboardScreen(),
+          const Center(child: Text("User Management")),
+          const Center(child: Text("Reports")),
           const ProfileScreen(),
         ];
 
       case AppRole.organizer:
         return [
-          OrganizerDashboardScreen(),
-          const Center(child: Text("My Events")),      // Placeholder
-          const Center(child: Text("QR Scanner")),     // Placeholder
+          const OrganizerDashboardScreen(),
+          const Center(child: Text("My Events")),
+          const Center(child: Text("QR Scanner")),
           const ProfileScreen(),
         ];
 
       case AppRole.student:
+        return [
+          const StudentDashboardScreen(), // Full Dashboard
+          const EventCatalogScreen(),
+          GalleryScreen(),
+          const ProfileScreen(),
+        ];
+
       case AppRole.visitor:
       default:
         return [
-          StudentDashboardScreen(), // We will polish this next!
+          // Visitor Home is the Catalog
           const EventCatalogScreen(),
           GalleryScreen(),
           const ProfileScreen(),

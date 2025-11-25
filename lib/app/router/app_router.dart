@@ -25,11 +25,13 @@ import '../../features/common/information/presentation/screens/faq_screen.dart';
 import '../../features/common/information/presentation/screens/sitemap_screen.dart';
 import '../../features/common/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/common/profile/presentation/screens/profile_screen.dart';
+import '../../features/common/notifications/presentation/screens/notifications_screen.dart';
 
-// --- Student Screens (NEW) ---
+// --- Student Screens ---
 import '../../features/student/registered_events/presentation/screens/registered_events_screen.dart';
 import '../../features/student/certificates/presentation/screens/certificates_screen.dart';
 import '../../features/student/feedback/presentation/screens/feedback_form_screen.dart';
+import '../../features/student/favorites/presentation/screens/favorites_screen.dart';
 
 import 'main_navigation_shell.dart';
 
@@ -37,6 +39,17 @@ class AppRouter {
   AppRouter(this._authService);
 
   final AuthService _authService;
+
+  // --- SECURITY CONFIGURATION ---
+  // List of routes that strictly require the 'Student Participant' role.
+  // Visitors accessing these will be redirected to the Upgrade Screen.
+  static const List<String> _participantOnlyRoutes = [
+    AppRoutes.registeredEvents,
+    AppRoutes.certificates,
+    AppRoutes.feedback,
+    AppRoutes.favorites,
+    AppRoutes.notifications,
+  ];
 
   late final GoRouter router = GoRouter(
     initialLocation: AppRoutes.splash,
@@ -67,7 +80,7 @@ class AppRouter {
         builder: (context, state) => const RoleUpgradeScreen(),
       ),
 
-      // --- MAIN SHELL (Dashboard) ---
+      // --- MAIN SHELL ---
       GoRoute(
         path: AppRoutes.main,
         builder: (context, state) => const MainNavigationShell(),
@@ -88,7 +101,7 @@ class AppRouter {
         ],
       ),
 
-      // --- STUDENT FEATURES (NEW) ---
+      // --- STUDENT FEATURES (PROTECTED) ---
       GoRoute(
         path: AppRoutes.registeredEvents,
         builder: (context, state) => const RegisteredEventsScreen(),
@@ -101,8 +114,16 @@ class AppRouter {
         path: AppRoutes.feedback,
         builder: (context, state) => const FeedbackFormScreen(),
       ),
+      GoRoute(
+        path: AppRoutes.favorites,
+        builder: (context, state) => const FavoritesScreen(),
+      ),
 
       // --- COMMON FEATURES ---
+      GoRoute(
+        path: AppRoutes.notifications,
+        builder: (context, state) => const NotificationsScreen(),
+      ),
       GoRoute(
         path: AppRoutes.gallery,
         builder: (context, state) => GalleryScreen(),
@@ -133,9 +154,9 @@ class AppRouter {
 
   FutureOr<String?> _resolveRedirect(
       BuildContext context, GoRouterState state) async {
-    final location = state.uri.toString();
+    final location = state.uri.path; // Use .path to ignore query params
 
-    // 1. PUBLIC ROUTES: Allow access without login
+    // 1. Public Routes (No Auth Required)
     if (location == AppRoutes.splash ||
         location == AppRoutes.onboarding ||
         location == AppRoutes.register ||
@@ -146,22 +167,29 @@ class AppRouter {
     final user = await _authService.currentUser;
     final loggingIn = location == AppRoutes.login;
 
-    // 2. Guard protected routes: Force login if no user
-    if (user == null && !loggingIn) {
-      return AppRoutes.login;
+    // 2. Unauthenticated Logic
+    if (user == null) {
+      if (!loggingIn) return AppRoutes.login;
+      return null;
     }
 
-    // 3. Redirect logged-in users away from Login page
-    if (user != null && loggingIn) {
+    // 3. Authenticated but on Login page -> Go Main
+    if (loggingIn) {
       return AppRoutes.main;
     }
 
-    // 4. Role upgrade guard
-    if (user != null &&
-        user.role == AppRole.visitor &&
-        !user.profileCompleted &&
-        location != AppRoutes.roleUpgrade) {
-      return AppRoutes.roleUpgrade;
+    // 4. ROLE GUARD: Visitor trying to access Participant pages
+    if (user.role == AppRole.visitor) {
+      // A. Force profile completion first if not done
+      if (!user.profileCompleted && location != AppRoutes.roleUpgrade) {
+        return AppRoutes.roleUpgrade;
+      }
+
+      // B. Block access to restricted routes
+      if (_participantOnlyRoutes.contains(location)) {
+        // Redirect to Upgrade screen instead of letting them access it
+        return AppRoutes.roleUpgrade;
+      }
     }
 
     return null;

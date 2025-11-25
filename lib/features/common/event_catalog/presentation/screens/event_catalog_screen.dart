@@ -29,7 +29,7 @@ class _EventCatalogScreenState extends State<EventCatalogScreen> {
           GlobalSearchBar(
             hintText: 'Search events, categories, organizers...',
             onSearch: (query) async {
-              final events = await _eventRepository.fetchEvents();
+              final events = await _eventRepository.getEventsStream().first;
               return events
                   .where((event) =>
                       event.title.toLowerCase().contains(query.toLowerCase()))
@@ -48,7 +48,7 @@ class _EventCatalogScreenState extends State<EventCatalogScreen> {
           const SizedBox(height: AppSizes.md),
           Expanded(
             child: FutureBuilder<List<Event>>(
-              future: _eventRepository.fetchEvents(),
+              future: _eventRepository.getEventsStream().first,
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());

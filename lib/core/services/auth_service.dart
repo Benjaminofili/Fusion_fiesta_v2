@@ -1,17 +1,15 @@
 import '../../data/models/user.dart';
 import '../../data/repositories/auth_repository.dart';
-import 'storage_service.dart'; // 1. Import StorageService
+import 'storage_service.dart';
 
 class AuthService {
-  // 2. Update constructor
   AuthService(this._repository, this._storageService);
 
   final AuthRepository _repository;
-  final StorageService _storageService; // 3. Add StorageService
+  final StorageService _storageService;
 
   User? _currentUser; // In-memory cache
 
-  // 4. Enhanced getter for SplashScreen
   Future<User?> get currentUser async {
     // 1. Check in-memory cache
     if (_currentUser != null) return _currentUser;
@@ -20,31 +18,36 @@ class AuthService {
     _currentUser = _storageService.getUser();
     if (_currentUser != null) return _currentUser;
 
-    // 3. As a last resort, check repository (e.g., for a "remember me" token)
+    // 3. Check repository
     _currentUser = await _repository.getCurrentUser();
     return _currentUser;
   }
 
-  // 5. Enhanced signIn
   Future<User> signIn(String email, String password) async {
     final user = await _repository.signIn(email, password);
-    _currentUser = user; // cache in memory
-    await _storageService.saveUser(user); // cache in storage
+    _currentUser = user;
+    await _storageService.saveUser(user);
     return user;
   }
 
-  // 6. Enhanced signUp
   Future<User> signUp(User user, String password) async {
     final signedUpUser = await _repository.signUp(user, password);
-    _currentUser = signedUpUser; // cache in memory
-    await _storageService.saveUser(signedUpUser); // cache in storage
+    _currentUser = signedUpUser;
+    await _storageService.saveUser(signedUpUser);
     return signedUpUser;
   }
 
-  // 7. Enhanced signOut
   Future<void> signOut() async {
     await _repository.signOut();
-    _currentUser = null; // clear in-memory cache
-    await _storageService.clearUser(); // clear storage
+    _currentUser = null;
+    await _storageService.clearUser();
+  }
+
+  // --- NEW METHOD FOR ROLE UPGRADE ---
+  // Updates the user in Memory, Storage, and (optionally) Backend
+  Future<void> updateUserSession(User updatedUser) async {
+    _currentUser = updatedUser;
+    await _storageService.saveUser(updatedUser);
+    // Note: In a real app, you would also call _repository.updateUser(updatedUser) here
   }
 }

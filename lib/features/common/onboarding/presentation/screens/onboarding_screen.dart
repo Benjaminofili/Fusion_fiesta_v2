@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:ui' as ui;
 
 import '../../../../../app/di/service_locator.dart';
@@ -161,13 +162,24 @@ class _OnboardingPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(32),
+      padding: EdgeInsets.all(32.w),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Scene Container
-          SizedBox(height: 320, width: 320, child: scene),
-          const SizedBox(height: 40),
+          SizedBox(
+            height: 320.w, // Scales with width to keep aspect ratio
+            width: 320.w,
+            child: FittedBox(
+              fit: BoxFit.contain,
+              child: SizedBox(
+                width: 320, // Internal logic keeps fixed coordinate system
+                height: 320,
+                child: scene,
+              ),
+            ),
+          ),
+          SizedBox(height: 40.h), // Responsive spacing
 
           // Typography - FORCED WHITE for contrast
           Text(
@@ -175,23 +187,25 @@ class _OnboardingPage extends StatelessWidget {
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.w800,
-              color: Colors.white, // High contrast against colored bg
+              color: Colors.white,
+              fontSize: 24.sp, // Scalable font
               letterSpacing: -0.5,
             ),
           ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2, end: 0),
 
-          const SizedBox(height: 16),
+          SizedBox(height: 16.h),
 
           Text(
             description,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.white.withOpacity(0.9), // High contrast
+              color: Colors.white.withOpacity(0.9),
+              fontSize: 16.sp, // Scalable font
               height: 1.5,
             ),
           ).animate().fadeIn(delay: 200.ms, duration: 600.ms),
 
-          const SizedBox(height: 80), // Space for bottom controls
+          SizedBox(height: 80.h), // Space for bottom controls
         ],
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart'; // Uses your defined colors
@@ -65,9 +66,9 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(24.w), // Responsive padding
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
+              constraints: BoxConstraints(maxWidth: 400.w), // Cap width for tablets
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -75,23 +76,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // --- 1. LOGO & HEADER ---
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20.h),
                     Hero(
                       tag: 'app_logo',
                       child: SizedBox(
-                        height: 160,
+                        height: 160.h,
                         child: Image.asset(
                           'assets/images/logo.webp', // Ensure you have this file
                           fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) => const Icon(
+                          errorBuilder: (context, error, stackTrace) =>  Icon(
                             FontAwesomeIcons.graduationCap,
-                            size: 100,
+                            size: 80.sp,
                             color: AppColors.primary,
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 32),
+                     SizedBox(height: 32.h),
                     Text(
                       'Welcome Back!',
                       textAlign: TextAlign.center,
@@ -100,7 +101,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                     SizedBox(height: 8.h),
                     Text(
                       'Sign in to access your dashboard',
                       textAlign: TextAlign.center,
@@ -108,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: AppColors.textSecondary,
                       ),
                     ),
-                    const SizedBox(height: 48),
+                     SizedBox(height: 48.h),
 
                     // --- 2. EMAIL FIELD ---
                     TextFormField(
@@ -136,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       validator: (value) => value?.contains('@') == true ? null : 'Please enter a valid email',
                     ),
-                    const SizedBox(height: 20),
+                     SizedBox(height: 20.h),
 
                     // --- 3. PASSWORD FIELD ---
                     TextFormField(
@@ -187,11 +188,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                     SizedBox(height: 24.h),
 
                     // --- 5. LOGIN BUTTON ---
                     SizedBox(
-                      height: 56,
+                      height: 56.h,
                       child: FilledButton(
                         onPressed: _isLoading ? null : _login,
                         style: FilledButton.styleFrom(
@@ -202,35 +203,43 @@ class _LoginScreenState extends State<LoginScreen> {
                           elevation: 2,
                         ),
                         child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text(
+                            ?  CircularProgressIndicator(color: Colors.white)
+                            :  Text(
                           'Sign In',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                     SizedBox(height: 24.h),
 
                     // --- 6. REGISTER LINK ---
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                          "Don't have an account? ",
-                          style: TextStyle(color: AppColors.textSecondary),
-                        ),
-                        GestureDetector(
-                          onTap: () => context.push(AppRoutes.register), // <--- Navigation
-                          child: const Text(
-                            'Register',
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
+                    // Replace the entire Row(...) at the bottom with this:
+                    Center(
+                      child: GestureDetector(
+                        onTap: () => context.push(AppRoutes.register),
+                        child: RichText(
+                          textAlign: TextAlign.center,
+                          text: TextSpan(
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.textSecondary,
+                              fontSize: 14.sp, // Responsive font
                             ),
+                            children: [
+                              const TextSpan(text: "Don't have an account? "),
+                              TextSpan(
+                                text: 'Register',
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14.sp,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
+
                   ],
                 ),
               ),

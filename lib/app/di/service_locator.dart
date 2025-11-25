@@ -7,34 +7,35 @@ import '../../core/services/storage_service.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/event_repository.dart';
 import '../../data/repositories/user_repository.dart';
+import '../../data/repositories/notification_repository.dart'; // Required import
 import '../../mock/mock_repositories.dart';
 
 final GetIt serviceLocator = GetIt.instance;
 
-// 1. Make your function async
 Future<void> configureDependencies() async {
 
-  // 2. Initialize and register StorageService FIRST
+  // 1. Initialize and register StorageService FIRST
+  // We do this separately because it requires 'await' to be ready
   final storageService = StorageService();
   await storageService.init();
   serviceLocator.registerSingleton<StorageService>(storageService);
 
-  // 3. Your existing cascade, with two modifications
+  // 2. Register all other services and repositories
   serviceLocator
     ..registerLazySingleton<AuthRepository>(() => MockAuthRepository())
     ..registerLazySingleton<UserRepository>(() => MockUserRepository())
     ..registerLazySingleton<EventRepository>(() => MockEventRepository())
 
-  // 4. MODIFIED: Inject both Repository and StorageService
+  // --- NEW: Register the Notification Repository ---
+    ..registerLazySingleton<NotificationRepository>(() => MockNotificationRepository())
+
+  // Services
     ..registerLazySingleton<AuthService>(
           () => AuthService(
         serviceLocator<AuthRepository>(),
-        serviceLocator<StorageService>(), // Added new dependency
+        serviceLocator<StorageService>(),
       ),
     )
-
     ..registerLazySingleton<NotificationService>(NotificationService.new)
-  // 5. REMOVED: This is now registered above as an initialized singleton
-  // ..registerLazySingleton<StorageService>(StorageService.new)
     ..registerLazySingleton<ConnectivityService>(ConnectivityService.new);
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 
@@ -24,25 +25,32 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   final AuthService _authService = serviceLocator<AuthService>();
 
   User? _user;
-  late Future<List<Event>> _eventsFuture;
 
+  // Streams
+  late Stream<List<Event>> _highlightEventsStream;
+  late Stream<List<Event>> _upcomingEventsStream;
+
+  // Dashboard Counters
   int _registeredCount = 0;
   int _certificateCount = 0;
   int _favoriteCount = 0;
+  int _feedbackPendingCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
     _loadDashboardStats();
-    _eventsFuture = _eventRepository.fetchEvents();
+
+    // FIX 1: Use .asBroadcastStream() to prevent "Stream already listened to" error
+    // This allows the StreamBuilder to re-subscribe during rebuilds/hot reloads.
+    _highlightEventsStream = _eventRepository.getEventsStream().asBroadcastStream();
+    _upcomingEventsStream = _eventRepository.getEventsStream().asBroadcastStream();
   }
 
   Future<void> _loadUserData() async {
     final user = await _authService.currentUser;
-    if (mounted) {
-      setState(() => _user = user);
-    }
+    if (mounted) setState(() => _user = user);
   }
 
   Future<void> _loadDashboardStats() async {
@@ -52,22 +60,18 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         _registeredCount = 4;
         _certificateCount = 12;
         _favoriteCount = 7;
+        _feedbackPendingCount = 2;
       });
     }
   }
 
   Future<void> _refresh() async {
-    setState(() {
-      _eventsFuture = _eventRepository.fetchEvents();
-    });
     await _loadDashboardStats();
-  }
-
-  // ✅ Dynamic header height calculator
-  double _getHeaderHeight(BuildContext context) {
-    final statusBar = MediaQuery.of(context).padding.top;
-    // Minimal: 70px content + status bar + 10px buffer
-    return 70.0 + statusBar + 10.0;
+    setState(() {
+      // Refresh streams
+      _highlightEventsStream = _eventRepository.getEventsStream().asBroadcastStream();
+      _upcomingEventsStream = _eventRepository.getEventsStream().asBroadcastStream();
+    });
   }
 
   @override
@@ -79,218 +83,285 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         color: AppColors.primary,
         child: CustomScrollView(
           slivers: [
-            // --- 1. DYNAMIC HEADER ---
-            SliverAppBar(
-              expandedHeight: _getHeaderHeight(context), // ✅ RESPONSIVE
-              pinned: true,
-              backgroundColor: AppColors.primary,
-              elevation: 0,
-              actions: [
-                IconButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('No new notifications')),
-                    );
-                  },
-                  icon: const Icon(
-                    Icons.notifications_outlined,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-              flexibleSpace: FlexibleSpaceBar(
-                background: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [AppColors.primary, Color(0xFF7C4DFF)],
-                    ),
-                  ),
-                  child: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24.0,
-                        vertical: 16.0,
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          CircleAvatar(
-                            radius: 28,
-                            backgroundColor: Colors.white24,
-                            backgroundImage: _user?.profilePictureUrl != null
-                                ? NetworkImage(_user!.profilePictureUrl!)
-                                : null,
-                            child: _user?.profilePictureUrl == null
-                                ? const Icon(
-                              Icons.person,
-                              color: Colors.white,
-                              size: 30,
-                            )
-                                : null,
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Welcome back,',
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.8),
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  _user?.name ?? 'Student',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            // --- 2. QUICK ACCESS TILES ---
+            // --- 1. HEADER SECTION & CARDS ---
             SliverToBoxAdapter(
-              child: Transform.translate(
-                offset: const Offset(0, -20),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                  child: Row(
+              // FIX 2: Layout structure for "Overlapping" without "Overflowing"
+              // We use a Stack containing a Column. The Column creates physical space
+              // for the cards to sit in, ensuring clicks are registered.
+              child: Stack(
+                children: [
+                  // Background Layer: Purple Header + Empty Space below it
+                  Column(
                     children: [
-                      _QuickAccessCard(
-                        label: 'Registered',
-                        count: _registeredCount.toString().padLeft(2, '0'),
-                        icon: FontAwesomeIcons.ticket,
-                        color: Colors.blue,
-                        onTap: () => context.push(AppRoutes.registeredEvents),
-                      ),
-                      const SizedBox(width: 12),
-                      _QuickAccessCard(
-                        label: 'Certificates',
-                        count: _certificateCount.toString().padLeft(2, '0'),
-                        icon: FontAwesomeIcons.award,
-                        color: Colors.orange,
-                        onTap: () => context.push(AppRoutes.certificates),
-                      ),
-                      const SizedBox(width: 12),
-                      _QuickAccessCard(
-                        label: 'Favorites',
-                        count: _favoriteCount.toString().padLeft(2, '0'),
-                        icon: FontAwesomeIcons.heart,
-                        color: Colors.pink,
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Favorites coming soon'),
-                            ),
-                          );
-                        },
-                      ),
+                      _buildHeader(context),
+                      // This invisible box reserves space for the bottom half of the cards.
+                      // Since cards are 110.h, we reserve 55.h so they overlap 50%.
+                      SizedBox(height: 55.h),
                     ],
                   ),
-                ),
-              ),
-            ),
 
-            // --- 3. EVENTS TITLE ---
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Upcoming Events',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => context.go(AppRoutes.events),
-                      child: const Text('See All'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // --- 4. EVENTS LIST ---
-            FutureBuilder<List<Event>>(
-              future: _eventsFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.only(top: 40),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                  );
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Center(child: Text('No upcoming events.')),
-                    ),
-                  );
-                }
-
-                final events = snapshot.data!;
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                      final event = events[index];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 8,
-                        ),
-                        child: EventCard(
-                          event: event,
-                          onTap: () => context.push(
-                            '${AppRoutes.events}/details',
-                            extra: event,
-                          ),
-                        ),
-                      )
-                          .animate()
-                          .fadeIn(delay: (50 * index).ms)
-                          .slideY(begin: 0.1);
-                    },
-                    childCount: events.length,
+                  // Foreground Layer: The Cards
+                  // Pinned to the bottom of the Stack (which ends at the bottom of the SizedBox)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: _buildQuickAccessSection(context),
                   ),
-                );
-              },
+                ],
+              ),
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+            // --- 2. SPACER ---
+            // Small gap between the bottom of cards and the "Next Event" title
+            SliverToBoxAdapter(child: SizedBox(height: 24.h)),
+
+            // --- 3. YOUR NEXT EVENT (Highlight) ---
+            SliverToBoxAdapter(child: _buildNextEventSection(context)),
+
+            // --- 4. UPCOMING EVENTS ---
+            _buildUpcomingEventsSection(context),
+
+            // Bottom padding for scrolling
+            SliverToBoxAdapter(child: SizedBox(height: 100.h)),
           ],
         ),
       ),
     );
   }
+
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      // Padding ensures content inside header (text/avatar) doesn't touch the cards
+      padding: EdgeInsets.only(bottom: 60.h),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.primary, Color(0xFF7C4DFF)],
+        ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        minimum: EdgeInsets.only(top: 20.h),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              CircleAvatar(
+                radius: 26.r,
+                backgroundColor: Colors.white24,
+                backgroundImage: _user?.profilePictureUrl != null
+                    ? NetworkImage(_user!.profilePictureUrl!)
+                    : null,
+                child: _user?.profilePictureUrl == null
+                    ? Icon(Icons.person, color: Colors.white, size: 28.sp)
+                    : null,
+              ),
+              SizedBox(width: 16.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome back,',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      _user?.name ?? 'Student',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.bold,
+                        height: 1.2,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.notifications_outlined, color: Colors.white, size: 24.sp),
+                  onPressed: () { context.push(AppRoutes.notifications); },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickAccessSection(BuildContext context) {
+    return SizedBox(
+      height: 110.h,
+      child: ListView(
+        padding: EdgeInsets.symmetric(horizontal: 24.w),
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        children: [
+          _QuickAccessCard(
+            label: 'Registered',
+            count: _registeredCount.toString().padLeft(2, '0'),
+            icon: FontAwesomeIcons.ticket,
+            color: Colors.blue,
+            onTap: () => context.push(AppRoutes.registeredEvents),
+          ),
+          SizedBox(width: 12.w),
+          _QuickAccessCard(
+            label: 'Certificates',
+            count: _certificateCount.toString().padLeft(2, '0'),
+            icon: FontAwesomeIcons.award,
+            color: Colors.orange,
+            onTap: () => context.push(AppRoutes.certificates),
+          ),
+          SizedBox(width: 12.w),
+          _QuickAccessCard(
+            label: 'Favorites',
+            count: _favoriteCount.toString().padLeft(2, '0'),
+            icon: FontAwesomeIcons.heart,
+            color: Colors.pink,
+            onTap: () => context.push(AppRoutes.favorites),
+          ),
+          SizedBox(width: 12.w),
+          _QuickAccessCard(
+            label: 'Feedback',
+            count: _feedbackPendingCount.toString().padLeft(2, '0'),
+            icon: FontAwesomeIcons.commentDots,
+            color: Colors.teal,
+            onTap: () => context.push(AppRoutes.feedback),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNextEventSection(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Your Next Event',
+            style: TextStyle(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          SizedBox(height: 12.h),
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16.r),
+              border: Border.all(
+                  color: AppColors.primary.withOpacity(0.3), width: 1),
+              color: AppColors.primary.withOpacity(0.05),
+            ),
+            child: StreamBuilder<List<Event>>(
+              stream: _highlightEventsStream,
+              builder: (context, snapshot) {
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Padding(
+                    padding: EdgeInsets.all(16.w),
+                    child: const Text(
+                        "You haven't registered for any upcoming events."),
+                  );
+                }
+                return EventCard(
+                  event: snapshot.data!.first,
+                  onTap: () => context.push('${AppRoutes.events}/details',
+                      extra: snapshot.data!.first),
+                );
+              },
+            ),
+          ),
+          SizedBox(height: 24.h),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUpcomingEventsSection(BuildContext context) {
+    return SliverList(
+      delegate: SliverChildListDelegate([
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24.w),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Explore Events',
+                style: TextStyle(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              TextButton(
+                onPressed: () => context.go(AppRoutes.events),
+                child: Text('See All', style: TextStyle(fontSize: 14.sp)),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 8.h),
+        StreamBuilder<List<Event>>(
+          stream: _upcomingEventsStream,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return const Center(child: Text('No events found.'));
+            }
+
+            final events = snapshot.data!.length > 1
+                ? snapshot.data!.sublist(1)
+                : <Event>[];
+
+            if (events.isEmpty) {
+              return Padding(
+                padding: EdgeInsets.all(24.w),
+                child: const Center(
+                    child: Text("Check back later for more events!")),
+              );
+            }
+
+            return Column(
+              children: events.map((event) {
+                return Padding(
+                  padding:
+                  EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
+                  child: EventCard(
+                    event: event,
+                    onTap: () => context.push(
+                      '${AppRoutes.events}/details',
+                      extra: event,
+                    ),
+                  ),
+                ).animate().fadeIn().slideY(begin: 0.1);
+              }).toList(),
+            );
+          },
+        ),
+      ]),
+    );
+  }
 }
 
-// ... _QuickAccessCard stays the same
-
-// --- HELPER: COMPACT QUICK ACCESS CARD ---
 class _QuickAccessCard extends StatelessWidget {
   final String label;
   final String count;
@@ -308,55 +379,49 @@ class _QuickAccessCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 100.w,
+        padding: EdgeInsets.all(12.w),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Align(
+              alignment: Alignment.topRight,
+              child: Icon(icon, color: color, size: 20.sp),
+            ),
+            const Spacer(),
+            Text(
+              count,
+              style: TextStyle(
+                fontSize: 22.sp,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
               ),
-            ],
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 18),
+            ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary,
               ),
-              const SizedBox(height: 12),
-              Text(
-                count,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 11, // Smaller font to fit 3 cards
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textSecondary,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
       ),
     );

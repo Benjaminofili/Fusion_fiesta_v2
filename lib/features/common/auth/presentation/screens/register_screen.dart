@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
@@ -168,7 +169,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding:  EdgeInsets.all(24.w),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 600),
               child: Form(
@@ -212,7 +213,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                     SizedBox(height: 24.h),
 
                     // --- 2. ROLE SELECTION (FIXED OVERFLOW) ---
                     DropdownButtonFormField<AppRole>(
@@ -242,13 +243,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     if (_isStaff)
                       Padding(
-                        padding: const EdgeInsets.only(top: 8.0, left: 12),
+                        padding:  EdgeInsets.only(top: 8.0, left: 12),
                         child: Text(
                           '⚠️ Staff accounts require Admin approval.',
-                          style: TextStyle(color: AppColors.warning, fontSize: 12),
+                          style: TextStyle(color: AppColors.warning, fontSize: 12.sp),
                         ),
                       ),
-                    const SizedBox(height: 24),
+                     SizedBox(height: 24.h),
 
                     // --- 3. COMMON FIELDS ---
                     TextFormField(
@@ -257,7 +258,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       decoration: _inputDecoration('Full Name', Icons.person_outline),
                       validator: (value) => (value?.length ?? 0) > 2 ? null : 'Name too short',
                     ),
-                    const SizedBox(height: 16),
+                     SizedBox(height: 16.h),
 
                     TextFormField(
                       controller: _emailController,
@@ -272,7 +273,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16),
+                     SizedBox(height: 16.h),
 
                     TextFormField(
                       controller: _mobileController,
@@ -280,7 +281,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       decoration: _inputDecoration('Mobile Number', Icons.phone_android),
                       validator: (value) => (value?.length ?? 0) > 9 ? null : 'Invalid mobile number',
                     ),
-                    const SizedBox(height: 16),
+                     SizedBox(height: 16.h),
 
                     TextFormField(
                       controller: _departmentController,
@@ -288,7 +289,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       decoration: _inputDecoration('Department', Icons.business),
                       validator: (value) => (value?.length ?? 0) > 1 ? null : 'Required',
                     ),
-                    const SizedBox(height: 16),
+                     SizedBox(height: 16.h),
 
                     // --- 4. ROLE SPECIFIC FIELDS ---
 
@@ -296,7 +297,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (_isStudentParticipant) ...[
                       const Divider(height: 40),
                       Text('Participant Verification', style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 16),
+                       SizedBox(height: 16.h),
 
                       TextFormField(
                         controller: _enrolmentController,
@@ -305,7 +306,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ? 'Enrolment Number is required'
                             : null,
                       ),
-                      const SizedBox(height: 16),
+                       SizedBox(height: 16.h),
 
                       // Mock File Picker for ID Proof
                       UploadPicker(
@@ -338,7 +339,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ],
 
-                    const SizedBox(height: 24),
+                     SizedBox(height: 24.h),
 
                     // --- 5. PASSWORD FIELDS ---
                     TextFormField(
@@ -349,7 +350,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       }),
                       validator: (value) => (value?.length ?? 0) > 5 ? null : 'Min 6 characters',
                     ),
-                    const SizedBox(height: 16),
+                     SizedBox(height: 16.h),
 
                     TextFormField(
                       controller: _confirmPasswordController,
@@ -363,11 +364,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       },
                     ),
 
-                    const SizedBox(height: 40),
+                     SizedBox(height: 40.h),
 
                     // --- 6. SUBMIT BUTTON ---
                     SizedBox(
-                      height: 56,
+                      height: 56.h,
                       child: FilledButton(
                         onPressed: _isLoading ? null : _register,
                         style: FilledButton.styleFrom(
@@ -375,13 +376,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
                         child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text(
+                            ?  CircularProgressIndicator(color: Colors.white)
+                            :  Text(
                           'Create Account',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
+                     SizedBox(height: 24.h),
+                     // ----Back to Login ------
+                    Center(
+                      child: GestureDetector(
+                        onTap: () => context.pop(), // Go back to Login
+                        child: RichText(
+                          textAlign: TextAlign.center,
+                          text: TextSpan(
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.textSecondary,
+                              fontSize: 14.sp,
+                            ),
+                            children: [
+                              const TextSpan(text: "Already have an account? "),
+                              TextSpan(
+                                text: 'Login',
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14.sp,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 20.h), // Bottom padding
                   ],
                 ),
               ),

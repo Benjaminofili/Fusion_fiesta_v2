@@ -11,7 +11,10 @@ class AppRoutes {
   static const String registeredEvents = '/registered-events';
   static const String certificates = '/certificates';
   static const String feedback = '/feedback';
+  static const String favorites = '/favorites';
 
+  static const String notifications = '/notifications';
+  static const String settings = '/settings';
   static const String events = '/events';
   static const String eventDetails = '/events/details';
   static const String gallery = '/gallery';
