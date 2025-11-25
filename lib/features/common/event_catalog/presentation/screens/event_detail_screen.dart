@@ -4,8 +4,13 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/constants/app_roles.dart'; // Import AppRole
+import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/services/auth_service.dart';
 import '../../../../../data/models/event.dart';
+import '../../../../../data/repositories/event_repository.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final Event event;
@@ -17,29 +22,89 @@ class EventDetailScreen extends StatefulWidget {
 }
 
 class _EventDetailScreenState extends State<EventDetailScreen> {
-  bool _isRegistered = false; // Mock state
-  bool _isLoading = false;
+  // Dependencies
+  final AuthService _authService = serviceLocator<AuthService>();
+  final EventRepository _eventRepository = serviceLocator<EventRepository>();
+
+  // State
+  bool _isRegistered = false;
+  bool _isLoading = true;
   bool _isFavorite = false;
 
-  Future<void> _toggleRegistration() async {
-    setState(() => _isLoading = true);
-    // TODO: Call API to register
-    await Future.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      setState(() {
-        _isRegistered = !_isRegistered;
-        _isLoading = false;
-      });
+  @override
+  void initState() {
+    super.initState();
+    _checkRegistrationStatus();
+  }
 
+  /// Checks if the current user is already registered for this specific event
+  Future<void> _checkRegistrationStatus() async {
+    final user = await _authService.currentUser;
+    if (user != null) {
+      // Fetch list of IDs user is registered for
+      final registeredIds = await _eventRepository.getRegisteredEventIds(user.id);
+      if (mounted) {
+        setState(() {
+          _isRegistered = registeredIds.contains(widget.event.id);
+          _isLoading = false;
+        });
+      }
+    } else {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Handles the logic when the user clicks "Register" or "Cancel"
+  Future<void> _handleRegistrationAction() async {
+    // 1. Get Current User
+    final user = await _authService.currentUser;
+    if (user == null) return; // Should be handled by auth guard, but safety check
+
+    // 2. ROLE CHECK: VISITOR GUARD 🛡️
+    // If the user is a Visitor, they cannot register.
+    if (user.role == AppRole.visitor) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_isRegistered
-              ? 'Successfully registered!'
-              : 'Registration cancelled'),
-          backgroundColor: _isRegistered ? AppColors.success : AppColors.textPrimary,
-          behavior: SnackBarBehavior.floating,
+        const SnackBar(
+          content: Text('You must upgrade to a Participant account to register!'),
+          backgroundColor: AppColors.warning,
+          duration: Duration(seconds: 3),
         ),
       );
+      // Redirect to Role Upgrade Screen
+      context.push(AppRoutes.roleUpgrade);
+      return;
+    }
+
+    // 3. PERFORM REGISTRATION / CANCELLATION
+    setState(() => _isLoading = true);
+
+    try {
+      if (_isRegistered) {
+        await _eventRepository.cancelRegistration(widget.event.id, user.id);
+      } else {
+        await _eventRepository.registerForEvent(widget.event.id, user.id);
+      }
+
+      // 4. Refresh Status to update UI
+      await _checkRegistrationStatus();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_isRegistered ? 'Successfully registered!' : 'Registration cancelled'),
+            backgroundColor: _isRegistered ? AppColors.success : AppColors.textPrimary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -66,12 +131,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           CustomScrollView(
             slivers: [
               // --- 1. HERO IMAGE HEADER ---
-              // --- 1. HERO IMAGE HEADER ---
               SliverAppBar(
                 expandedHeight: 300.h,
                 pinned: true,
                 backgroundColor: AppColors.primary,
-                // INCREASED MARGIN for Leading Button
                 leading: Container(
                   margin: EdgeInsets.only(left: 8.w, top: 8.h, bottom: 8.h),
                   decoration: BoxDecoration(
@@ -84,7 +147,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                   ),
                 ),
                 actions: [
-                  // INCREASED MARGIN for Share Button
                   Container(
                     margin: EdgeInsets.only(right: 16.w, top: 8.h, bottom: 8.h),
                     decoration: BoxDecoration(
@@ -110,7 +172,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                         ),
                         // TODO: Use Image.network(event.imageUrl) here
                       ),
-                      // Gradient Overlay for text readability
+                      // Gradient Overlay
                       DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -171,7 +233,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
                       SizedBox(height: 24.h),
 
-                      // Info Rows (Date, Time, Location)
+                      // Info Rows
                       _InfoRow(
                         icon: Icons.calendar_today_outlined,
                         title: dateFormatted,
@@ -246,22 +308,22 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       borderRadius: BorderRadius.circular(12.r),
                     ),
                     child: IconButton(
-                      // Toggle Icon based on state
                       icon: Icon(
                         _isFavorite ? Icons.favorite : Icons.favorite_border,
                         color: _isFavorite ? Colors.pink : AppColors.textSecondary,
                       ),
-                      onPressed: _toggleFavorite, // Call new method
+                      onPressed: _toggleFavorite,
                     ),
                   ),
                   SizedBox(width: 16.w),
 
-                  // Register Button
+                  // Register Button (UPDATED)
                   Expanded(
                     child: SizedBox(
                       height: 56.h,
                       child: FilledButton(
-                        onPressed: _isLoading ? null : _toggleRegistration,
+                        // Call the new handler
+                        onPressed: _isLoading ? null : _handleRegistrationAction,
                         style: FilledButton.styleFrom(
                           backgroundColor: _isRegistered ? Colors.white : AppColors.primary,
                           foregroundColor: _isRegistered ? AppColors.error : Colors.white,
@@ -305,7 +367,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   }
 }
 
-// --- HELPER WIDGET ---
 class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String title;

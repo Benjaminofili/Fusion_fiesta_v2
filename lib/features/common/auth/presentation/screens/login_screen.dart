@@ -59,6 +59,32 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _performLogin(String email, String password) async {
+    setState(() => _isLoading = true);
+
+    try {
+      await _authService.signIn(email, password);
+      if (!mounted) return;
+      context.go(AppRoutes.main);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Login Failed: ${e.toString()}'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // --- GUEST LOGIN ACTION ---
+  void _loginAsGuest() {
+    // Use dummy credentials to create a Visitor session
+    _performLogin('guest@fusionfiesta.com', 'guest123');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -210,7 +236,23 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                     SizedBox(height: 24.h),
+
+                    SizedBox(height: 16.h),
+
+                    // --- NEW: CONTINUE AS GUEST BUTTON ---
+                    SizedBox(
+                      height: 56.h,
+                      child: OutlinedButton(
+                        onPressed: _isLoading ? null : _loginAsGuest,
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.primary),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: Text('Continue as Guest', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+
+                    SizedBox(height: 24.h),
 
                     // --- 6. REGISTER LINK ---
                     // Replace the entire Row(...) at the bottom with this:

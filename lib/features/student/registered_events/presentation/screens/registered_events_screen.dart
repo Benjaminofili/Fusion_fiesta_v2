@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/services/auth_service.dart';
 import '../../../../../core/widgets/event_card.dart';
 import '../../../../../data/models/event.dart';
 import '../../../../../data/repositories/event_repository.dart';
@@ -21,6 +22,8 @@ class RegisteredEventsScreen extends StatefulWidget {
 class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
     with SingleTickerProviderStateMixin {
   final EventRepository _eventRepository = serviceLocator<EventRepository>();
+  final AuthService _authService = serviceLocator<AuthService>();
+
   late TabController _tabController;
 
   // State
@@ -41,6 +44,7 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
     super.dispose();
   }
 
+  /// Fetches only the events the user has registered for
   Future<void> _loadRegisteredEvents() async {
     setState(() => _isLoading = true);
 
@@ -48,18 +52,28 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
     await Future.delayed(const Duration(milliseconds: 800));
 
     try {
-      // In a real app, call _eventRepository.fetchRegisteredEvents(userId)
-      // For now, we fetch ALL events and filter them for the demo
+      // 1. Get Current User ID
+      final user = await _authService.currentUser;
+      if (user == null) {
+        // Should not happen due to route guards
+        if(mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      // 2. Get List of Registered IDs (e.g., ['event-1', 'event-3'])
+      final registeredIds = await _eventRepository.getRegisteredEventIds(user.id);
+
+      // 3. Fetch All Events (to get the details for those IDs)
       final allEvents = await _eventRepository.getEventsStream().first;
+
+      // 4. Filter: Keep only events that are in our registered list
+      final myEvents = allEvents.where((e) => registeredIds.contains(e.id)).toList();
 
       final now = DateTime.now();
 
-      // Mocking: Let's assume we are registered for the first 3 events returned
-      // In reality, the backend would only return registered events
-      final myEvents = allEvents.take(4).toList();
-
       if (mounted) {
         setState(() {
+          // 5. Sort into Upcoming and Past
           _upcomingEvents = myEvents.where((e) => e.startTime.isAfter(now)).toList();
           _pastEvents = myEvents.where((e) => e.startTime.isBefore(now)).toList();
           _isLoading = false;
@@ -67,6 +81,7 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading events: $e')));
     }
   }
 
@@ -162,12 +177,12 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
                 onTap: () => context.push('${AppRoutes.events}/details', extra: event),
               ),
 
-              // Optional: Add a "Status Badge" overlay if needed
+              // "COMPLETED" Badge for Past Events
               if (!isUpcoming)
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.6), // Fade out past events
+                      color: Colors.white.withOpacity(0.6), // Fade out the card
                       borderRadius: BorderRadius.circular(16.r),
                     ),
                     alignment: Alignment.center,

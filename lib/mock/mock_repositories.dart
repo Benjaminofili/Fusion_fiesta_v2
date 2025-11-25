@@ -103,6 +103,9 @@ class MockEventRepository implements EventRepository {
     ),
   );
 
+  // 2. NEW: Track Registrations in Memory (Map<UserId, Set<EventId>>)
+  final Map<String, Set<String>> _registrations = {};
+
   MockEventRepository() {
     // 2. SIMULATE REAL-TIME UPDATE
     // After 5 seconds, a new "Surprise Event" will appear automatically
@@ -124,26 +127,67 @@ class MockEventRepository implements EventRepository {
     });
   }
 
-  // --- CHANGED TO ASYNC* TO FIX LOADING ISSUE ---
   @override
   Stream<List<Event>> getEventsStream() async* {
-    // 1. Immediately yield the current list to the new listener
     yield List.from(_events);
-
-    // 2. Then connect to the broadcast stream for future updates
     yield* _controller.stream;
   }
 
   @override
   Future<Event> getEvent(String id) async {
-    // In a real app, this would also be a stream or fetch fresh data
     return _events.firstWhere((event) => event.id == id);
   }
 
   @override
   Future<List<GalleryItem>> fetchGallery() async {
     await Future.delayed(const Duration(milliseconds: 150));
-    return []; // Empty for now
+    return [];
+  }
+
+  // --- NEW: IMPLEMENT REGISTRATION LOGIC ---
+
+  @override
+  Future<void> registerForEvent(String eventId, String userId) async {
+    await Future.delayed(const Duration(milliseconds: 500)); // Simulate Network
+
+    // Initialize set if null
+    if (!_registrations.containsKey(userId)) {
+      _registrations[userId] = {};
+    }
+
+    // Add Event ID
+    _registrations[userId]!.add(eventId);
+
+    // Optional: Update local event count (Mocking reactivity)
+    final eventIndex = _events.indexWhere((e) => e.id == eventId);
+    if (eventIndex != -1) {
+      final event = _events[eventIndex];
+      _events[eventIndex] = event.copyWith(registeredCount: event.registeredCount + 1);
+      _controller.add(List.from(_events)); // Notify listeners
+    }
+  }
+
+  @override
+  Future<void> cancelRegistration(String eventId, String userId) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    if (_registrations.containsKey(userId)) {
+      _registrations[userId]!.remove(eventId);
+    }
+
+    // Optional: Update count
+    final eventIndex = _events.indexWhere((e) => e.id == eventId);
+    if (eventIndex != -1) {
+      final event = _events[eventIndex];
+      _events[eventIndex] = event.copyWith(registeredCount: event.registeredCount - 1);
+      _controller.add(List.from(_events));
+    }
+  }
+
+  @override
+  Future<List<String>> getRegisteredEventIds(String userId) async {
+    // Return list of IDs this user is registered for
+    return _registrations[userId]?.toList() ?? [];
   }
 
   void dispose() {
