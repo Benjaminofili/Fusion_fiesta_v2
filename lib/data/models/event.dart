@@ -11,6 +11,7 @@ class Event extends Equatable {
     required this.startTime,
     required this.endTime,
     required this.location,
+    required this.organizer, // <--- NEW FIELD
     this.bannerUrl,
     this.guidelinesUrl,
     this.registrationLimit,
@@ -24,6 +25,7 @@ class Event extends Equatable {
   final DateTime startTime;
   final DateTime endTime;
   final String location;
+  final String organizer; // <--- NEW FIELD
   final String? bannerUrl;
   final String? guidelinesUrl;
   final int? registrationLimit;
@@ -39,6 +41,7 @@ class Event extends Equatable {
     DateTime? startTime,
     DateTime? endTime,
     String? location,
+    String? organizer, // <--- NEW
     String? bannerUrl,
     String? guidelinesUrl,
     int? registrationLimit,
@@ -52,6 +55,7 @@ class Event extends Equatable {
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       location: location ?? this.location,
+      organizer: organizer ?? this.organizer, // <--- NEW
       bannerUrl: bannerUrl ?? this.bannerUrl,
       guidelinesUrl: guidelinesUrl ?? this.guidelinesUrl,
       registrationLimit: registrationLimit ?? this.registrationLimit,
@@ -61,17 +65,17 @@ class Event extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        title,
-        description,
-        category,
-        startTime,
-        endTime,
-        location,
-        bannerUrl,
-        guidelinesUrl,
-        registrationLimit,
-        registeredCount,
-      ];
+    id,
+    title,
+    description,
+    category,
+    startTime,
+    endTime,
+    location,
+    organizer, // <--- NEW
+    bannerUrl,
+    guidelinesUrl,
+    registrationLimit,
+    registeredCount,
+  ];
 }
-

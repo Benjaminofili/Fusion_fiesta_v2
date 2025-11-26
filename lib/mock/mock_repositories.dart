@@ -103,6 +103,7 @@ class MockEventRepository implements EventRepository {
       startTime: DateTime.now().add(Duration(days: index)),
       endTime: DateTime.now().add(Duration(days: index, hours: 2)),
       location: 'Auditorium ${index + 1}',
+      organizer: index.isEven ? 'Tech Club' : 'Cultural Committee',
       registrationLimit: 100,
       registeredCount: 42 + index,
     ),
@@ -125,6 +126,7 @@ class MockEventRepository implements EventRepository {
         startTime: DateTime.now().add(const Duration(days: 1)),
         endTime: DateTime.now().add(const Duration(days: 1, hours: 4)),
         location: lastEvent.location,
+        organizer: 'Student Council',
         registrationLimit: lastEvent.registrationLimit,
         registeredCount: 0,
       );

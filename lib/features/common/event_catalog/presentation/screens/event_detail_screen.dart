@@ -45,17 +45,12 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
   Future<void> _checkStatus(String userId) async {
     try {
-      // 1. CHECK REGISTRATION (Use .first to get current data from stream)
-      final registeredIds = await _eventRepository.getRegisteredEventIdsStream(userId).first;
-
-      // 2. CHECK FAVORITES (Use .first)
+      // FIX: Use .first to wait for the stream's first value
       final favoriteIds = await _eventRepository.getFavoriteEventIdsStream(userId).first;
 
       if (mounted) {
         setState(() {
           _isFavorite = favoriteIds.contains(widget.event.id);
-          // Note: Registration button state is handled by StreamBuilder below,
-          // but we can init local state if needed.
         });
       }
     } catch (e) {
@@ -67,7 +62,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     final user = await _authService.currentUser;
     if (user == null) return;
 
-    // 1. ROLE CHECK 🛡️
     if (user.role == AppRole.visitor) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -79,7 +73,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       return;
     }
 
-    // 2. PERFORM ACTION
     setState(() => _isActionLoading = true);
     try {
       if (isCurrentlyRegistered) {
@@ -87,8 +80,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       } else {
         await _eventRepository.registerForEvent(widget.event.id, user.id);
       }
-      // No need to setState here; the StreamBuilder in the build method
-      // will automatically update the button text when the repo emits the change.
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -102,14 +93,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
   Future<void> _toggleFavorite() async {
     if (_userId == null) return;
-
-    // 1. Optimistic UI Update (Instant feedback)
     setState(() => _isFavorite = !_isFavorite);
-
-    // 2. Actual Repository Call (Updates Dashboard)
     try {
       await _eventRepository.toggleFavorite(widget.event.id, _userId!);
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -120,7 +106,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         );
       }
     } catch (e) {
-      // Revert on error
       setState(() => _isFavorite = !_isFavorite);
     }
   }
@@ -137,7 +122,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         children: [
           CustomScrollView(
             slivers: [
-              // --- 1. HEADER ---
+              // --- HEADER ---
               SliverAppBar(
                 expandedHeight: 300.h,
                 pinned: true,
@@ -179,14 +164,14 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 ),
               ),
 
-              // --- 2. BODY ---
+              // --- BODY ---
               SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.all(24.w),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Title & Category
+                      // Title
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -221,6 +206,65 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       ),
                       SizedBox(height: 24.h),
 
+                      // Organizer Info
+                      Container(
+                        padding: EdgeInsets.all(12.w),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9FAFB),
+                          borderRadius: BorderRadius.circular(12.r),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 20.r,
+                              backgroundColor: AppColors.primary.withValues(alpha: 0.2),
+                              child: Text(
+                                event.organizer.substring(0, 1),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                  fontSize: 16.sp,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 12.w),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Organizer',
+                                    style: TextStyle(
+                                      fontSize: 11.sp,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                  Text(
+                                    event.organizer,
+                                    style: TextStyle(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Contact feature coming soon')),
+                                );
+                              },
+                              child: const Text('Contact'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 24.h),
+
+                      // Info Rows
                       _InfoRow(icon: Icons.calendar_today_outlined, title: dateFormatted, subtitle: timeFormatted),
                       SizedBox(height: 16.h),
                       _InfoRow(icon: Icons.location_on_outlined, title: event.location, subtitle: 'Get Directions', isLink: true),
@@ -231,6 +275,26 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       Text('About Event', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                       SizedBox(height: 12.h),
                       Text(event.description, style: TextStyle(fontSize: 15.sp, color: AppColors.textSecondary, height: 1.6)),
+
+                      // Guidelines Button
+                      if (event.guidelinesUrl != null) ...[
+                        SizedBox(height: 24.h),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Downloading Guidelines PDF...')),
+                            );
+                          },
+                          icon: const Icon(Icons.download_rounded),
+                          label: const Text('Download Event Guidelines'),
+                          style: OutlinedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(vertical: 12.h),
+                            side: const BorderSide(color: AppColors.primary),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                          ),
+                        ),
+                      ],
+
                       SizedBox(height: 100.h),
                     ],
                   ),
@@ -239,7 +303,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             ],
           ),
 
-          // --- 3. REACTIVE BOTTOM BAR ---
+          // --- BOTTOM BAR ---
           Positioned(
             bottom: 0,
             left: 0,
@@ -254,23 +318,17 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               ),
               child: Row(
                 children: [
-                  // Favorite Button
                   Container(
                     decoration: BoxDecoration(
                       border: Border.all(color: AppColors.border),
                       borderRadius: BorderRadius.circular(12.r),
                     ),
                     child: IconButton(
-                      icon: Icon(
-                          _isFavorite ? Icons.favorite : Icons.favorite_border,
-                          color: _isFavorite ? Colors.pink : AppColors.textSecondary
-                      ),
-                      onPressed: _toggleFavorite, // Now calls the fixed method
+                      icon: Icon(_isFavorite ? Icons.favorite : Icons.favorite_border, color: _isFavorite ? Colors.pink : AppColors.textSecondary),
+                      onPressed: _toggleFavorite,
                     ),
                   ),
                   SizedBox(width: 16.w),
-
-                  // Register Button (StreamBuilder for Real-Time Status)
                   Expanded(
                     child: _userId == null
                         ? const SizedBox()
@@ -279,7 +337,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       initialData: const [],
                       builder: (context, snapshot) {
                         final isRegistered = snapshot.data?.contains(event.id) ?? false;
-
                         return SizedBox(
                           height: 56.h,
                           child: FilledButton(
