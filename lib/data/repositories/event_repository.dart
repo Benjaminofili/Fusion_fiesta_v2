@@ -8,8 +8,16 @@ abstract class EventRepository {
   Future<Event> getEvent(String id);
   Future<List<GalleryItem>> fetchGallery();
 
-  // --- NEW METHODS ---
+  // --- USER INTERACTION STREAMS ---
+  Stream<List<String>> getRegisteredEventIdsStream(String userId);
+  Stream<List<String>> getFavoriteEventIdsStream(String userId);
+
+  // For counters (Simulated for now, can be real streams later)
+  Future<int> getCertificateCount(String userId);
+  Future<int> getFeedbackCount(String userId);
+
+  // Actions
   Future<void> registerForEvent(String eventId, String userId);
   Future<void> cancelRegistration(String eventId, String userId);
-  Future<List<String>> getRegisteredEventIds(String userId);
+  Future<void> toggleFavorite(String eventId, String userId); // Added this
 }

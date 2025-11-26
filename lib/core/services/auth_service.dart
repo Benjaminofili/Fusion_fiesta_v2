@@ -1,3 +1,4 @@
+import 'dart:async';
 import '../../data/models/user.dart';
 import '../../data/repositories/auth_repository.dart';
 import 'storage_service.dart';
@@ -10,16 +11,22 @@ class AuthService {
 
   User? _currentUser; // In-memory cache
 
+  // --- NEW: Stream Controller to notify UI of changes ---
+  final _userController = StreamController<User?>.broadcast();
+
+  // Expose the stream for the UI to listen to
+  Stream<User?> get userStream => _userController.stream;
+
   Future<User?> get currentUser async {
-    // 1. Check in-memory cache
     if (_currentUser != null) return _currentUser;
-
-    // 2. Check persistent storage
     _currentUser = _storageService.getUser();
-    if (_currentUser != null) return _currentUser;
-
-    // 3. Check repository
+    if (_currentUser != null) {
+      // Ensure stream gets the initial value
+      _userController.add(_currentUser);
+      return _currentUser;
+    }
     _currentUser = await _repository.getCurrentUser();
+    _userController.add(_currentUser); // Notify listeners
     return _currentUser;
   }
 
@@ -27,6 +34,7 @@ class AuthService {
     final user = await _repository.signIn(email, password);
     _currentUser = user;
     await _storageService.saveUser(user);
+    _userController.add(user); // 🔔 Notify: User Logged In
     return user;
   }
 
@@ -34,6 +42,7 @@ class AuthService {
     final signedUpUser = await _repository.signUp(user, password);
     _currentUser = signedUpUser;
     await _storageService.saveUser(signedUpUser);
+    _userController.add(signedUpUser); // 🔔 Notify: User Signed Up
     return signedUpUser;
   }
 
@@ -41,13 +50,16 @@ class AuthService {
     await _repository.signOut();
     _currentUser = null;
     await _storageService.clearUser();
+    _userController.add(null); // 🔔 Notify: User Logged Out
   }
 
-  // --- NEW METHOD FOR ROLE UPGRADE ---
-  // Updates the user in Memory, Storage, and (optionally) Backend
   Future<void> updateUserSession(User updatedUser) async {
     _currentUser = updatedUser;
     await _storageService.saveUser(updatedUser);
-    // Note: In a real app, you would also call _repository.updateUser(updatedUser) here
+    _userController.add(updatedUser); // 🔔 Notify: Role Changed!
+  }
+
+  void dispose() {
+    _userController.close();
   }
 }

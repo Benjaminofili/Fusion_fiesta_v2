@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
-import '../../../../../core/constants/app_roles.dart'; // Import AppRole
+import '../../../../../core/constants/app_roles.dart';
 import '../../../../../core/constants/app_routes.dart';
 import '../../../../../core/services/auth_service.dart';
 import '../../../../../data/models/event.dart';
@@ -22,81 +22,73 @@ class EventDetailScreen extends StatefulWidget {
 }
 
 class _EventDetailScreenState extends State<EventDetailScreen> {
-  // Dependencies
   final AuthService _authService = serviceLocator<AuthService>();
   final EventRepository _eventRepository = serviceLocator<EventRepository>();
 
-  // State
-  bool _isRegistered = false;
-  bool _isLoading = true;
+  bool _isActionLoading = false;
   bool _isFavorite = false;
+  String? _userId;
 
   @override
   void initState() {
     super.initState();
-    _checkRegistrationStatus();
+    _loadUserAndStatus();
   }
 
-  /// Checks if the current user is already registered for this specific event
-  Future<void> _checkRegistrationStatus() async {
+  Future<void> _loadUserAndStatus() async {
     final user = await _authService.currentUser;
     if (user != null) {
-      // Fetch list of IDs user is registered for
-      final registeredIds = await _eventRepository.getRegisteredEventIds(user.id);
-      if (mounted) {
-        setState(() {
-          _isRegistered = registeredIds.contains(widget.event.id);
-          _isLoading = false;
-        });
-      }
-    } else {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _userId = user.id);
+      await _checkStatus(user.id);
     }
   }
 
-  /// Handles the logic when the user clicks "Register" or "Cancel"
-  Future<void> _handleRegistrationAction() async {
-    // 1. Get Current User
-    final user = await _authService.currentUser;
-    if (user == null) return; // Should be handled by auth guard, but safety check
+  Future<void> _checkStatus(String userId) async {
+    try {
+      // 1. CHECK REGISTRATION (Use .first to get current data from stream)
+      final registeredIds = await _eventRepository.getRegisteredEventIdsStream(userId).first;
 
-    // 2. ROLE CHECK: VISITOR GUARD 🛡️
-    // If the user is a Visitor, they cannot register.
+      // 2. CHECK FAVORITES (Use .first)
+      final favoriteIds = await _eventRepository.getFavoriteEventIdsStream(userId).first;
+
+      if (mounted) {
+        setState(() {
+          _isFavorite = favoriteIds.contains(widget.event.id);
+          // Note: Registration button state is handled by StreamBuilder below,
+          // but we can init local state if needed.
+        });
+      }
+    } catch (e) {
+      print("Error checking status: $e");
+    }
+  }
+
+  Future<void> _handleRegistrationAction(bool isCurrentlyRegistered) async {
+    final user = await _authService.currentUser;
+    if (user == null) return;
+
+    // 1. ROLE CHECK 🛡️
     if (user.role == AppRole.visitor) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('You must upgrade to a Participant account to register!'),
           backgroundColor: AppColors.warning,
-          duration: Duration(seconds: 3),
         ),
       );
-      // Redirect to Role Upgrade Screen
       context.push(AppRoutes.roleUpgrade);
       return;
     }
 
-    // 3. PERFORM REGISTRATION / CANCELLATION
-    setState(() => _isLoading = true);
-
+    // 2. PERFORM ACTION
+    setState(() => _isActionLoading = true);
     try {
-      if (_isRegistered) {
+      if (isCurrentlyRegistered) {
         await _eventRepository.cancelRegistration(widget.event.id, user.id);
       } else {
         await _eventRepository.registerForEvent(widget.event.id, user.id);
       }
-
-      // 4. Refresh Status to update UI
-      await _checkRegistrationStatus();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_isRegistered ? 'Successfully registered!' : 'Registration cancelled'),
-            backgroundColor: _isRegistered ? AppColors.success : AppColors.textPrimary,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      // No need to setState here; the StreamBuilder in the build method
+      // will automatically update the button text when the repo emits the change.
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -104,18 +96,33 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isActionLoading = false);
     }
   }
 
-  void _toggleFavorite() {
+  Future<void> _toggleFavorite() async {
+    if (_userId == null) return;
+
+    // 1. Optimistic UI Update (Instant feedback)
     setState(() => _isFavorite = !_isFavorite);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_isFavorite ? 'Added to Favorites' : 'Removed from Favorites'),
-        duration: const Duration(seconds: 1),
-      ),
-    );
+
+    // 2. Actual Repository Call (Updates Dashboard)
+    try {
+      await _eventRepository.toggleFavorite(widget.event.id, _userId!);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_isFavorite ? 'Added to Favorites' : 'Removed from Favorites'),
+            duration: const Duration(seconds: 1),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      // Revert on error
+      setState(() => _isFavorite = !_isFavorite);
+    }
   }
 
   @override
@@ -130,49 +137,31 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         children: [
           CustomScrollView(
             slivers: [
-              // --- 1. HERO IMAGE HEADER ---
+              // --- 1. HEADER ---
               SliverAppBar(
                 expandedHeight: 300.h,
                 pinned: true,
                 backgroundColor: AppColors.primary,
-                leading: Container(
-                  margin: EdgeInsets.only(left: 8.w, top: 8.h, bottom: 8.h),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.black),
-                    onPressed: () => context.pop(),
-                  ),
+                leading: _CircleButton(
+                  icon: Icons.arrow_back,
+                  onTap: () => context.pop(),
                 ),
                 actions: [
-                  Container(
-                    margin: EdgeInsets.only(right: 16.w, top: 8.h, bottom: 8.h),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.share_outlined, color: Colors.black),
-                      onPressed: () {},
-                    ),
-                  ),
+                  _CircleButton(icon: Icons.share_outlined, onTap: () {}),
+                  SizedBox(width: 16.w),
                 ],
                 flexibleSpace: FlexibleSpaceBar(
                   background: Stack(
                     fit: StackFit.expand,
                     children: [
                       Container(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         child: Icon(
                           _getCategoryIcon(event.category),
                           size: 80.sp,
-                          color: AppColors.primary.withOpacity(0.3),
+                          color: AppColors.primary.withValues(alpha: 0.3),
                         ),
-                        // TODO: Use Image.network(event.imageUrl) here
                       ),
-                      // Gradient Overlay
                       DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -180,7 +169,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                             end: Alignment.bottomCenter,
                             colors: [
                               Colors.transparent,
-                              Colors.black.withOpacity(0.6),
+                              Colors.black.withValues(alpha: 0.6),
                             ],
                           ),
                         ),
@@ -190,7 +179,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 ),
               ),
 
-              // --- 2. CONTENT BODY ---
+              // --- 2. BODY ---
               SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.all(24.w),
@@ -216,7 +205,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                           Container(
                             padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
+                              color: AppColors.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(20.r),
                             ),
                             child: Text(
@@ -230,51 +219,19 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                           ),
                         ],
                       ),
-
                       SizedBox(height: 24.h),
 
-                      // Info Rows
-                      _InfoRow(
-                        icon: Icons.calendar_today_outlined,
-                        title: dateFormatted,
-                        subtitle: timeFormatted,
-                      ),
+                      _InfoRow(icon: Icons.calendar_today_outlined, title: dateFormatted, subtitle: timeFormatted),
                       SizedBox(height: 16.h),
-                      _InfoRow(
-                        icon: Icons.location_on_outlined,
-                        title: event.location,
-                        subtitle: 'Get Directions',
-                        isLink: true,
-                      ),
+                      _InfoRow(icon: Icons.location_on_outlined, title: event.location, subtitle: 'Get Directions', isLink: true),
                       SizedBox(height: 16.h),
-                      _InfoRow(
-                        icon: Icons.people_outline,
-                        title: '${event.registeredCount} Registered',
-                        subtitle: 'Limited seats available',
-                      ),
+                      _InfoRow(icon: Icons.people_outline, title: '${event.registeredCount} Registered', subtitle: 'Limited seats available'),
 
                       SizedBox(height: 32.h),
-
-                      // Description
-                      Text(
-                        'About Event',
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
+                      Text('About Event', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                       SizedBox(height: 12.h),
-                      Text(
-                        event.description,
-                        style: TextStyle(
-                          fontSize: 15.sp,
-                          color: AppColors.textSecondary,
-                          height: 1.6,
-                        ),
-                      ),
-
-                      SizedBox(height: 100.h), // Space for bottom bar
+                      Text(event.description, style: TextStyle(fontSize: 15.sp, color: AppColors.textSecondary, height: 1.6)),
+                      SizedBox(height: 100.h),
                     ],
                   ),
                 ),
@@ -282,7 +239,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             ],
           ),
 
-          // --- 3. STICKY BOTTOM BAR ---
+          // --- 3. REACTIVE BOTTOM BAR ---
           Positioned(
             bottom: 0,
             left: 0,
@@ -292,11 +249,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 20,
-                    offset: const Offset(0, -5),
-                  ),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, -5)),
                 ],
               ),
               child: Row(
@@ -309,43 +262,43 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                     ),
                     child: IconButton(
                       icon: Icon(
-                        _isFavorite ? Icons.favorite : Icons.favorite_border,
-                        color: _isFavorite ? Colors.pink : AppColors.textSecondary,
+                          _isFavorite ? Icons.favorite : Icons.favorite_border,
+                          color: _isFavorite ? Colors.pink : AppColors.textSecondary
                       ),
-                      onPressed: _toggleFavorite,
+                      onPressed: _toggleFavorite, // Now calls the fixed method
                     ),
                   ),
                   SizedBox(width: 16.w),
 
-                  // Register Button (UPDATED)
+                  // Register Button (StreamBuilder for Real-Time Status)
                   Expanded(
-                    child: SizedBox(
-                      height: 56.h,
-                      child: FilledButton(
-                        // Call the new handler
-                        onPressed: _isLoading ? null : _handleRegistrationAction,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: _isRegistered ? Colors.white : AppColors.primary,
-                          foregroundColor: _isRegistered ? AppColors.error : Colors.white,
-                          side: _isRegistered ? const BorderSide(color: AppColors.error) : null,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16.r),
+                    child: _userId == null
+                        ? const SizedBox()
+                        : StreamBuilder<List<String>>(
+                      stream: _eventRepository.getRegisteredEventIdsStream(_userId!),
+                      initialData: const [],
+                      builder: (context, snapshot) {
+                        final isRegistered = snapshot.data?.contains(event.id) ?? false;
+
+                        return SizedBox(
+                          height: 56.h,
+                          child: FilledButton(
+                            onPressed: _isActionLoading ? null : () => _handleRegistrationAction(isRegistered),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: isRegistered ? Colors.white : AppColors.primary,
+                              foregroundColor: isRegistered ? AppColors.error : Colors.white,
+                              side: isRegistered ? const BorderSide(color: AppColors.error) : null,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+                            ),
+                            child: _isActionLoading
+                                ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                                : Text(
+                              isRegistered ? 'Cancel Registration' : 'Register Now',
+                              style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+                            ),
                           ),
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2)
-                        )
-                            : Text(
-                          _isRegistered ? 'Cancel Registration' : 'Register Now',
-                          style: TextStyle(
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -367,18 +320,28 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   }
 }
 
+class _CircleButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _CircleButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.all(8.w),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.9), shape: BoxShape.circle),
+      child: IconButton(icon: Icon(icon, color: Colors.black), onPressed: onTap),
+    );
+  }
+}
+
 class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
   final bool isLink;
 
-  const _InfoRow({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    this.isLink = false,
-  });
+  const _InfoRow({required this.icon, required this.title, required this.subtitle, this.isLink = false});
 
   @override
   Widget build(BuildContext context) {
@@ -386,32 +349,15 @@ class _InfoRow extends StatelessWidget {
       children: [
         Container(
           padding: EdgeInsets.all(10.w),
-          decoration: BoxDecoration(
-            color: AppColors.background,
-            borderRadius: BorderRadius.circular(12.r),
-          ),
+          decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(12.r)),
           child: Icon(icon, color: AppColors.primary, size: 24.sp),
         ),
         SizedBox(width: 16.w),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 15.sp,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 13.sp,
-                color: isLink ? AppColors.primary : AppColors.textSecondary,
-                fontWeight: isLink ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
+            Text(title, style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            Text(subtitle, style: TextStyle(fontSize: 13.sp, color: isLink ? AppColors.primary : AppColors.textSecondary, fontWeight: isLink ? FontWeight.w600 : FontWeight.normal)),
           ],
         ),
       ],

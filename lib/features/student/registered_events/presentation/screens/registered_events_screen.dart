@@ -25,17 +25,18 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
   final AuthService _authService = serviceLocator<AuthService>();
 
   late TabController _tabController;
-
-  // State
-  bool _isLoading = true;
-  List<Event> _upcomingEvents = [];
-  List<Event> _pastEvents = [];
+  String? _userId;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadRegisteredEvents();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final user = await _authService.currentUser;
+    if (mounted) setState(() => _userId = user?.id);
   }
 
   @override
@@ -44,67 +45,20 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
     super.dispose();
   }
 
-  /// Fetches only the events the user has registered for
-  Future<void> _loadRegisteredEvents() async {
-    setState(() => _isLoading = true);
-
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 800));
-
-    try {
-      // 1. Get Current User ID
-      final user = await _authService.currentUser;
-      if (user == null) {
-        // Should not happen due to route guards
-        if(mounted) setState(() => _isLoading = false);
-        return;
-      }
-
-      // 2. Get List of Registered IDs (e.g., ['event-1', 'event-3'])
-      final registeredIds = await _eventRepository.getRegisteredEventIds(user.id);
-
-      // 3. Fetch All Events (to get the details for those IDs)
-      final allEvents = await _eventRepository.getEventsStream().first;
-
-      // 4. Filter: Keep only events that are in our registered list
-      final myEvents = allEvents.where((e) => registeredIds.contains(e.id)).toList();
-
-      final now = DateTime.now();
-
-      if (mounted) {
-        setState(() {
-          // 5. Sort into Upcoming and Past
-          _upcomingEvents = myEvents.where((e) => e.startTime.isAfter(now)).toList();
-          _pastEvents = myEvents.where((e) => e.startTime.isBefore(now)).toList();
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading events: $e')));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    if (_userId == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        title: Text(
-          'My Schedule',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-            fontSize: 20.sp,
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
-          onPressed: () => context.pop(),
-        ),
+        title: Text('My Schedule', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 20.sp)),
+        leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary), onPressed: () => context.pop()),
         bottom: TabBar(
           controller: _tabController,
           labelColor: AppColors.primary,
@@ -112,20 +66,41 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
           indicatorColor: AppColors.primary,
           indicatorWeight: 3,
           labelStyle: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
-          tabs: const [
-            Tab(text: 'Upcoming'),
-            Tab(text: 'Past'),
-          ],
+          tabs: const [Tab(text: 'Upcoming'), Tab(text: 'Past')],
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-          : TabBarView(
-        controller: _tabController,
-        children: [
-          _buildEventList(_upcomingEvents, isUpcoming: true),
-          _buildEventList(_pastEvents, isUpcoming: false),
-        ],
+      // 1. OUTER STREAM: Get All Events (Updates if organizer changes time/details)
+      body: StreamBuilder<List<Event>>(
+        stream: _eventRepository.getEventsStream(),
+        builder: (context, eventSnapshot) {
+          if (!eventSnapshot.hasData) return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+
+          // 2. INNER STREAM: Get User's Registrations (Updates if user registers/cancels)
+          return StreamBuilder<List<String>>(
+            stream: _eventRepository.getRegisteredEventIdsStream(_userId!),
+            builder: (context, idSnapshot) {
+              if (!idSnapshot.hasData) return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+
+              final allEvents = eventSnapshot.data!;
+              final registeredIds = idSnapshot.data!;
+
+              // 3. FILTER: Match Events to IDs
+              final myEvents = allEvents.where((e) => registeredIds.contains(e.id)).toList();
+
+              final now = DateTime.now();
+              final upcoming = myEvents.where((e) => e.startTime.isAfter(now)).toList();
+              final past = myEvents.where((e) => e.startTime.isBefore(now)).toList();
+
+              return TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildEventList(upcoming, isUpcoming: true),
+                  _buildEventList(past, isUpcoming: false),
+                ],
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -136,26 +111,16 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              isUpcoming ? FontAwesomeIcons.calendarXmark : FontAwesomeIcons.boxOpen,
-              size: 60.sp,
-              color: Colors.grey[300],
-            ),
+            Icon(isUpcoming ? FontAwesomeIcons.calendarXmark : FontAwesomeIcons.boxOpen, size: 60.sp, color: Colors.grey[300]),
             SizedBox(height: 16.h),
-            Text(
-              isUpcoming ? 'No upcoming events' : 'No past events history',
-              style: TextStyle(fontSize: 16.sp, color: Colors.grey[500]),
-            ),
+            Text(isUpcoming ? 'No upcoming events' : 'No past events history', style: TextStyle(fontSize: 16.sp, color: Colors.grey[500])),
             if (isUpcoming) ...[
               SizedBox(height: 24.h),
               FilledButton.icon(
-                onPressed: () => context.go(AppRoutes.events), // Go to Catalog
+                onPressed: () => context.go(AppRoutes.events),
                 icon: const Icon(Icons.search),
                 label: const Text('Explore Events'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-                ),
+                style: FilledButton.styleFrom(backgroundColor: AppColors.primary, padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h)),
               )
             ]
           ],
@@ -172,35 +137,16 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
           padding: EdgeInsets.only(bottom: 16.h),
           child: Stack(
             children: [
-              EventCard(
-                event: event,
-                onTap: () => context.push('${AppRoutes.events}/details', extra: event),
-              ),
-
-              // "COMPLETED" Badge for Past Events
+              EventCard(event: event, onTap: () => context.push('${AppRoutes.events}/details', extra: event)),
               if (!isUpcoming)
                 Positioned.fill(
                   child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.6), // Fade out the card
-                      borderRadius: BorderRadius.circular(16.r),
-                    ),
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(16.r)),
                     alignment: Alignment.center,
                     child: Container(
                       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(20.r),
-                      ),
-                      child: Text(
-                        'COMPLETED',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12.sp,
-                          letterSpacing: 1,
-                        ),
-                      ),
+                      decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20.r)),
+                      child: Text('COMPLETED', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12.sp, letterSpacing: 1)),
                     ),
                   ),
                 ),

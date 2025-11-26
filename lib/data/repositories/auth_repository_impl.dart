@@ -1,11 +1,16 @@
 import 'dart:convert';
 import 'package:uuid/uuid.dart';
 
-import '../../core/constants/app_roles.dart'; // Ensure this import is present!
+import '../../core/constants/app_roles.dart';
 import '../../core/errors/app_failure.dart';
 import '../../core/services/storage_service.dart';
 import '../models/user.dart';
 import '../repositories/auth_repository.dart';
+
+// --- MOCK DATABASE (Simulates Backend) ---
+// Key: Email, Value: User Object
+// We make this global so UserRepositoryImpl can access it too.
+final Map<String, User> mockUserDatabase = {};
 
 class AuthRepositoryImpl implements AuthRepository {
   final StorageService _storageService;
@@ -30,15 +35,20 @@ class AuthRepositoryImpl implements AuthRepository {
       throw AppFailure('Email and password are required.');
     }
 
-    // --- CHANGED: Default profileCompleted to TRUE ---
-    // This allows the user to land on the Event Catalog as a Visitor
-    // instead of being forced immediately to the Role Upgrade screen.
+    // 1. CHECK MOCK DATABASE (The Fix)
+    // If this user registered before, return their SAVED state (Participant)
+    if (mockUserDatabase.containsKey(email)) {
+      return mockUserDatabase[email]!;
+    }
+
+    // 2. NEW USER (Guest/Visitor Logic)
+    // Only create a new visitor if they don't exist in our "Server"
     final user = User(
       id: const Uuid().v4(),
       name: email.split('@').first,
       email: email,
       role: AppRole.visitor,
-      profileCompleted: true, // <--- FIX IS HERE (Was false)
+      profileCompleted: true,
     );
 
     return user;
@@ -47,14 +57,22 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<User> signUp(User user, String password) async {
     await _simulateNetworkDelay();
+
     if (password.length < 6) {
       throw AppFailure('Password must be at least 6 characters.');
     }
+
+    // 3. SAVE TO MOCK DATABASE
+    // This ensures that when they log out and log back in, we remember them.
+    mockUserDatabase[user.email] = user;
+
     return user;
   }
 
   @override
   Future<void> signOut() async {
     await _simulateNetworkDelay();
+    // Note: We do NOT clear mockUserDatabase here.
+    // That's the "Server". We only clear the local session in StorageService.
   }
 }

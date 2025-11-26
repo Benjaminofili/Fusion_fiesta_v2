@@ -2,6 +2,9 @@ import '../../core/errors/app_failure.dart';
 import '../models/user.dart';
 import '../repositories/user_repository.dart';
 
+// Import the mock database we just created
+import 'auth_repository_impl.dart';
+
 class UserRepositoryImpl implements UserRepository {
 
   Future<void> _simulateNetworkDelay() async {
@@ -11,21 +14,21 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<List<User>> fetchUsers() async {
     await _simulateNetworkDelay();
-    // Return empty list for now, or mock users if needed for Admin
-    return [];
+    return mockUserDatabase.values.toList();
   }
 
   @override
   Future<User> updateUser(User user) async {
     await _simulateNetworkDelay();
 
-    // REAL WORLD: Validation before sending to server
     if (user.id.isEmpty) {
       throw AppFailure('Cannot update user with empty ID.');
     }
 
-    // In production: PUT /api/users/{id}
-    // Return the updated user object
+    // --- THE FIX IS HERE ---
+    // Update the "Server" (Mock Database) with the new Role/Details
+    mockUserDatabase[user.email] = user;
+
     return user;
   }
 }

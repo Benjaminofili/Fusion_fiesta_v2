@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:uuid/uuid.dart';
 
 import '../core/constants/app_roles.dart';
@@ -12,7 +11,7 @@ import '../data/repositories/auth_repository.dart';
 import '../data/repositories/event_repository.dart';
 import '../data/repositories/user_repository.dart';
 
-
+// --- 1. MOCK AUTH REPOSITORY ---
 class MockAuthRepository implements AuthRepository {
   User? _currentUser;
 
@@ -48,6 +47,7 @@ class MockAuthRepository implements AuthRepository {
   }
 }
 
+// --- 2. MOCK USER REPOSITORY ---
 class MockUserRepository implements UserRepository {
   final List<User> _users = [
     User(
@@ -85,9 +85,14 @@ class MockUserRepository implements UserRepository {
   }
 }
 
+// --- 3. MOCK EVENT REPOSITORY (With Streams) ---
 class MockEventRepository implements EventRepository {
-  // 1. Internal State
-  final _controller = StreamController<List<Event>>.broadcast();
+  // Streams
+  final _eventController = StreamController<List<Event>>.broadcast();
+  final _registrationController = StreamController<List<String>>.broadcast();
+  final _favoriteController = StreamController<List<String>>.broadcast();
+
+  // Data Store
   final List<Event> _events = List.generate(
     4,
         (index) => Event(
@@ -103,39 +108,117 @@ class MockEventRepository implements EventRepository {
     ),
   );
 
-  // 2. NEW: Track Registrations in Memory (Map<UserId, Set<EventId>>)
+  // User Data: Map<UserId, Set<EventId>>
   final Map<String, Set<String>> _registrations = {};
+  final Map<String, Set<String>> _favorites = {};
 
   MockEventRepository() {
-    // 2. SIMULATE REAL-TIME UPDATE
-    // After 5 seconds, a new "Surprise Event" will appear automatically
+    // Simulate live update
     Future.delayed(const Duration(seconds: 5), () {
+      // FIX: Create new Event manually instead of using copyWith for ID
+      final lastEvent = _events.last;
       final newEvent = Event(
         id: 'event-new',
-        title: '🔥 Flash Photography Contest',
-        description: 'Pop-up event starting soon!',
-        category: 'Cultural',
+        title: '🔥 Pop-up Event',
+        description: lastEvent.description,
+        category: lastEvent.category,
         startTime: DateTime.now().add(const Duration(days: 1)),
         endTime: DateTime.now().add(const Duration(days: 1, hours: 4)),
-        location: 'Campus Lawn',
-        registrationLimit: 50,
+        location: lastEvent.location,
+        registrationLimit: lastEvent.registrationLimit,
         registeredCount: 0,
       );
 
-      _events.insert(0, newEvent); // Add to top
-      _controller.add(List.from(_events)); // Emit new list to active listeners
+      _events.insert(0, newEvent);
+      _eventController.add(List.from(_events));
     });
   }
+
+  // --- STREAMS ---
 
   @override
   Stream<List<Event>> getEventsStream() async* {
     yield List.from(_events);
-    yield* _controller.stream;
+    yield* _eventController.stream;
   }
+
+  @override
+  Stream<List<String>> getRegisteredEventIdsStream(String userId) async* {
+    yield _registrations[userId]?.toList() ?? [];
+    yield* _registrationController.stream.map((_) => _registrations[userId]?.toList() ?? []);
+  }
+
+  @override
+  Stream<List<String>> getFavoriteEventIdsStream(String userId) async* {
+    yield _favorites[userId]?.toList() ?? [];
+    yield* _favoriteController.stream.map((_) => _favorites[userId]?.toList() ?? []);
+  }
+
+  // --- ACTIONS ---
+
+  @override
+  Future<void> registerForEvent(String eventId, String userId) async {
+    await Future.delayed(const Duration(milliseconds: 300)); // Simulate network
+
+    if (!_registrations.containsKey(userId)) _registrations[userId] = {};
+    _registrations[userId]!.add(eventId);
+
+    // 1. Notify Registration Listeners
+    _registrationController.add([]);
+
+    // 2. Update Event Count & Notify Event Listeners
+    _updateEventCount(eventId, 1);
+  }
+
+  @override
+  Future<void> cancelRegistration(String eventId, String userId) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    if (_registrations.containsKey(userId)) {
+      _registrations[userId]!.remove(eventId);
+
+      // 1. Notify Registration Listeners
+      _registrationController.add([]);
+
+      // 2. Update Event Count & Notify Event Listeners
+      _updateEventCount(eventId, -1);
+    }
+  }
+
+  @override
+  Future<void> toggleFavorite(String eventId, String userId) async {
+    if (!_favorites.containsKey(userId)) _favorites[userId] = {};
+
+    final userFavs = _favorites[userId]!;
+    if (userFavs.contains(eventId)) {
+      userFavs.remove(eventId);
+    } else {
+      userFavs.add(eventId);
+    }
+
+    _favoriteController.add([]); // Notify Favorite Listeners
+  }
+
+  void _updateEventCount(String eventId, int delta) {
+    final index = _events.indexWhere((e) => e.id == eventId);
+    if (index != -1) {
+      _events[index] = _events[index].copyWith(
+          registeredCount: _events[index].registeredCount + delta
+      );
+      _eventController.add(List.from(_events));
+    }
+  }
+
+  // --- GETTERS (FUTURES) ---
 
   @override
   Future<Event> getEvent(String id) async {
     return _events.firstWhere((event) => event.id == id);
+  }
+
+  @override
+  Future<List<String>> getRegisteredEventIds(String userId) async {
+    return _registrations[userId]?.toList() ?? [];
   }
 
   @override
@@ -144,57 +227,20 @@ class MockEventRepository implements EventRepository {
     return [];
   }
 
-  // --- NEW: IMPLEMENT REGISTRATION LOGIC ---
+  @override
+  Future<int> getCertificateCount(String userId) async => 3; // Mock
 
   @override
-  Future<void> registerForEvent(String eventId, String userId) async {
-    await Future.delayed(const Duration(milliseconds: 500)); // Simulate Network
-
-    // Initialize set if null
-    if (!_registrations.containsKey(userId)) {
-      _registrations[userId] = {};
-    }
-
-    // Add Event ID
-    _registrations[userId]!.add(eventId);
-
-    // Optional: Update local event count (Mocking reactivity)
-    final eventIndex = _events.indexWhere((e) => e.id == eventId);
-    if (eventIndex != -1) {
-      final event = _events[eventIndex];
-      _events[eventIndex] = event.copyWith(registeredCount: event.registeredCount + 1);
-      _controller.add(List.from(_events)); // Notify listeners
-    }
-  }
-
-  @override
-  Future<void> cancelRegistration(String eventId, String userId) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    if (_registrations.containsKey(userId)) {
-      _registrations[userId]!.remove(eventId);
-    }
-
-    // Optional: Update count
-    final eventIndex = _events.indexWhere((e) => e.id == eventId);
-    if (eventIndex != -1) {
-      final event = _events[eventIndex];
-      _events[eventIndex] = event.copyWith(registeredCount: event.registeredCount - 1);
-      _controller.add(List.from(_events));
-    }
-  }
-
-  @override
-  Future<List<String>> getRegisteredEventIds(String userId) async {
-    // Return list of IDs this user is registered for
-    return _registrations[userId]?.toList() ?? [];
-  }
+  Future<int> getFeedbackCount(String userId) async => 5; // Mock
 
   void dispose() {
-    _controller.close();
+    _eventController.close();
+    _registrationController.close();
+    _favoriteController.close();
   }
 }
 
+// --- 4. MOCK NOTIFICATION REPOSITORY ---
 class MockNotificationRepository implements NotificationRepository {
   final List<AppNotification> _notifications = [
     AppNotification(
