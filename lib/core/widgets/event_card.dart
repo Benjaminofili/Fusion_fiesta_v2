@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:intl/intl.dart'; // Ensure this is in pubspec for date formatting
+import 'package:intl/intl.dart';
 
 import '../constants/app_colors.dart';
 import '../constants/app_sizes.dart';
@@ -21,6 +21,12 @@ class EventCard extends StatelessWidget {
     final dateFormatted = DateFormat('MMM d, yyyy').format(event.startTime);
     final timeFormatted = DateFormat('h:mm a').format(event.startTime);
 
+    // --- LOGIC: Calculate Slots ---
+    final limit = event.registrationLimit;
+    final registered = event.registeredCount;
+    final isFull = limit != null && registered >= limit;
+    final slotsLeft = limit != null ? (limit - registered) : null;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -29,7 +35,7 @@ class EventCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -41,40 +47,31 @@ class EventCard extends StatelessWidget {
             // --- 1. IMAGE & CATEGORY BADGE ---
             Stack(
               children: [
-                // Image Placeholder (or Network Image)
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                   child: Container(
                     height: 140,
                     width: double.infinity,
-                    color: AppColors.primary.withOpacity(0.1), // Placeholder bg
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     child: Icon(
                       _getCategoryIcon(event.category),
                       size: 40,
-                      color: AppColors.primary.withOpacity(0.4),
+                      color: AppColors.primary.withValues(alpha: 0.4),
                     ),
-                    // TODO: Uncomment when you have real images
-                    // child: Image.network(
-                    //   event.imageUrl,
-                    //   height: 140,
-                    //   width: double.infinity,
-                    //   fit: BoxFit.cover
-                    // ),
                   ),
                 ),
 
-                // Category Badge (Floating)
                 Positioned(
                   top: 12,
                   right: 12,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 4,
                         ),
                       ],
@@ -109,7 +106,6 @@ class EventCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title
                   Text(
                     event.title,
                     maxLines: 1,
@@ -122,11 +118,9 @@ class EventCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
 
-                  // Date & Time Row
                   Row(
                     children: [
-                      const Icon(Icons.calendar_today,
-                          size: 14, color: AppColors.textSecondary),
+                      const Icon(Icons.calendar_today, size: 14, color: AppColors.textSecondary),
                       const SizedBox(width: 6),
                       Text(
                         '$dateFormatted • $timeFormatted',
@@ -143,45 +137,43 @@ class EventCard extends StatelessWidget {
                   const Divider(height: 1, color: AppColors.border),
                   const SizedBox(height: 12),
 
-                  // Location & Status Row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Location
                       Expanded(
                         child: Row(
                           children: [
-                            const Icon(Icons.location_on_outlined,
-                                size: 16, color: AppColors.primary),
+                            const Icon(Icons.location_on_outlined, size: 16, color: AppColors.primary),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
                                 event.location,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textSecondary,
-                                ),
+                                style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
                               ),
                             ),
                           ],
                         ),
                       ),
 
-                      // Registration Count Badge
+                      // --- UPDATED BADGE: Available Slots ---
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.success.withOpacity(0.1),
+                          color: isFull
+                              ? AppColors.error.withValues(alpha: 0.1)
+                              : AppColors.success.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          '${event.registeredCount} Reg.',
-                          style: const TextStyle(
+                          isFull
+                              ? 'FULL'
+                              : (slotsLeft != null ? '$slotsLeft Slots Left' : 'Open'),
+                          style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.success,
+                            color: isFull ? AppColors.error : AppColors.success,
                           ),
                         ),
                       ),
@@ -196,17 +188,12 @@ class EventCard extends StatelessWidget {
     );
   }
 
-  // Helper to get icon based on category string
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
-      case 'cultural':
-        return FontAwesomeIcons.masksTheater;
-      case 'technical':
-        return FontAwesomeIcons.laptopCode;
-      case 'sports':
-        return FontAwesomeIcons.trophy;
-      default:
-        return FontAwesomeIcons.calendar;
+      case 'cultural': return FontAwesomeIcons.masksTheater;
+      case 'technical': return FontAwesomeIcons.laptopCode;
+      case 'sports': return FontAwesomeIcons.trophy;
+      default: return FontAwesomeIcons.calendar;
     }
   }
 }

@@ -45,9 +45,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
   Future<void> _checkStatus(String userId) async {
     try {
-      // FIX: Use .first to wait for the stream's first value
       final favoriteIds = await _eventRepository.getFavoriteEventIdsStream(userId).first;
-
       if (mounted) {
         setState(() {
           _isFavorite = favoriteIds.contains(widget.event.id);
@@ -82,8 +80,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final msg = e.toString().replaceAll('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text(msg), backgroundColor: AppColors.error),
         );
       }
     } finally {
@@ -112,257 +111,300 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final event = widget.event;
-    final dateFormatted = DateFormat('EEEE, MMMM d').format(event.startTime);
-    final timeFormatted = '${DateFormat('h:mm a').format(event.startTime)} - ${DateFormat('h:mm a').format(event.endTime)}';
-
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          CustomScrollView(
-            slivers: [
-              // --- HEADER ---
-              SliverAppBar(
-                expandedHeight: 300.h,
-                pinned: true,
-                backgroundColor: AppColors.primary,
-                leading: _CircleButton(
-                  icon: Icons.arrow_back,
-                  onTap: () => context.pop(),
-                ),
-                actions: [
-                  _CircleButton(icon: Icons.share_outlined, onTap: () {}),
-                  SizedBox(width: 16.w),
-                ],
-                flexibleSpace: FlexibleSpaceBar(
-                  background: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Container(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        child: Icon(
-                          _getCategoryIcon(event.category),
-                          size: 80.sp,
-                          color: AppColors.primary.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withValues(alpha: 0.6),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+      // --- THE FIX: Wrap entire body in StreamBuilder ---
+      body: StreamBuilder<List<Event>>(
+          stream: _eventRepository.getEventsStream(),
+          builder: (context, snapshot) {
+            // 1. FIND LIVE EVENT
+            // Look for the event with the same ID in the live stream.
+            // If not found yet (loading) or deleted, fallback to widget.event (Snapshot)
+            final liveEvent = snapshot.data?.firstWhere(
+                  (e) => e.id == widget.event.id,
+              orElse: () => widget.event,
+            ) ?? widget.event;
 
-              // --- BODY ---
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.all(24.w),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Title
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              event.title,
-                              style: TextStyle(
-                                fontSize: 26.sp,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary,
-                                height: 1.2,
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 12.w),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(20.r),
-                            ),
-                            child: Text(
-                              event.category,
-                              style: TextStyle(
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 24.h),
+            // 2. CALCULATE SLOTS (Using live data)
+            final limit = liveEvent.registrationLimit;
+            final registered = liveEvent.registeredCount;
+            final isFull = limit != null && registered >= limit;
+            final slotsLeft = limit != null ? (limit - registered) : null;
 
-                      // Organizer Info
-                      Container(
-                        padding: EdgeInsets.all(12.w),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF9FAFB),
-                          borderRadius: BorderRadius.circular(12.r),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Row(
+            String capacityLabel;
+            if (limit == null) {
+              capacityLabel = 'Unlimited Seats';
+            } else if (isFull) {
+              capacityLabel = 'Event Full (0 slots left)';
+            } else {
+              capacityLabel = '$slotsLeft slots remaining';
+            }
+
+            final dateFormatted = DateFormat('EEEE, MMMM d').format(liveEvent.startTime);
+            final timeFormatted = '${DateFormat('h:mm a').format(liveEvent.startTime)} - ${DateFormat('h:mm a').format(liveEvent.endTime)}';
+
+            return Stack(
+              children: [
+                CustomScrollView(
+                  slivers: [
+                    // --- HEADER ---
+                    SliverAppBar(
+                      expandedHeight: 300.h,
+                      pinned: true,
+                      backgroundColor: AppColors.primary,
+                      leading: _CircleButton(
+                        icon: Icons.arrow_back,
+                        onTap: () => context.pop(),
+                      ),
+                      actions: [
+                        _CircleButton(icon: Icons.share_outlined, onTap: () {}),
+                        SizedBox(width: 16.w),
+                      ],
+                      flexibleSpace: FlexibleSpaceBar(
+                        background: Stack(
+                          fit: StackFit.expand,
                           children: [
-                            CircleAvatar(
-                              radius: 20.r,
-                              backgroundColor: AppColors.primary.withValues(alpha: 0.2),
-                              child: Text(
-                                event.organizer.substring(0, 1),
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
-                                  fontSize: 16.sp,
+                            Container(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              child: Icon(
+                                _getCategoryIcon(liveEvent.category),
+                                size: 80.sp,
+                                color: AppColors.primary.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.transparent,
+                                    Colors.black.withValues(alpha: 0.6),
+                                  ],
                                 ),
                               ),
-                            ),
-                            SizedBox(width: 12.w),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Organizer',
-                                    style: TextStyle(
-                                      fontSize: 11.sp,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
-                                  Text(
-                                    event.organizer,
-                                    style: TextStyle(
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Contact feature coming soon')),
-                                );
-                              },
-                              child: const Text('Contact'),
                             ),
                           ],
                         ),
                       ),
-                      SizedBox(height: 24.h),
+                    ),
 
-                      // Info Rows
-                      _InfoRow(icon: Icons.calendar_today_outlined, title: dateFormatted, subtitle: timeFormatted),
-                      SizedBox(height: 16.h),
-                      _InfoRow(icon: Icons.location_on_outlined, title: event.location, subtitle: 'Get Directions', isLink: true),
-                      SizedBox(height: 16.h),
-                      _InfoRow(icon: Icons.people_outline, title: '${event.registeredCount} Registered', subtitle: 'Limited seats available'),
+                    // --- BODY ---
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(24.w),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Title
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    liveEvent.title,
+                                    style: TextStyle(
+                                      fontSize: 26.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary,
+                                      height: 1.2,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 12.w),
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(20.r),
+                                  ),
+                                  child: Text(
+                                    liveEvent.category,
+                                    style: TextStyle(
+                                      fontSize: 12.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 24.h),
 
-                      SizedBox(height: 32.h),
-                      Text('About Event', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                      SizedBox(height: 12.h),
-                      Text(event.description, style: TextStyle(fontSize: 15.sp, color: AppColors.textSecondary, height: 1.6)),
+                            // Organizer Info
+                            Container(
+                              padding: EdgeInsets.all(12.w),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF9FAFB),
+                                borderRadius: BorderRadius.circular(12.r),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 20.r,
+                                    backgroundColor: AppColors.primary.withValues(alpha: 0.2),
+                                    child: Text(
+                                      liveEvent.organizer.isNotEmpty ? liveEvent.organizer.substring(0, 1) : 'O',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primary,
+                                        fontSize: 16.sp,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 12.w),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Organizer',
+                                          style: TextStyle(
+                                            fontSize: 11.sp,
+                                            color: AppColors.textSecondary,
+                                          ),
+                                        ),
+                                        Text(
+                                          liveEvent.organizer,
+                                          style: TextStyle(
+                                            fontSize: 14.sp,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Contact feature coming soon')),
+                                      );
+                                    },
+                                    child: const Text('Contact'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(height: 24.h),
 
-                      // Guidelines Button
-                      if (event.guidelinesUrl != null) ...[
-                        SizedBox(height: 24.h),
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Downloading Guidelines PDF...')),
-                            );
-                          },
-                          icon: const Icon(Icons.download_rounded),
-                          label: const Text('Download Event Guidelines'),
-                          style: OutlinedButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: 12.h),
-                            side: const BorderSide(color: AppColors.primary),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                            // Info Rows (With LIVE SLOTS)
+                            _InfoRow(icon: Icons.calendar_today_outlined, title: dateFormatted, subtitle: timeFormatted),
+                            SizedBox(height: 16.h),
+                            _InfoRow(icon: Icons.location_on_outlined, title: liveEvent.location, subtitle: 'Get Directions', isLink: true),
+                            SizedBox(height: 16.h),
+
+                            // --- THIS ROW WILL NOW UPDATE INSTANTLY ---
+                            _InfoRow(
+                              icon: Icons.people_outline,
+                              title: '${liveEvent.registeredCount} / ${liveEvent.registrationLimit ?? '∞'} Registered',
+                              subtitle: capacityLabel,
+                              highlightColor: isFull ? AppColors.error : null,
+                            ),
+
+                            SizedBox(height: 32.h),
+                            Text('About Event', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                            SizedBox(height: 12.h),
+                            Text(liveEvent.description, style: TextStyle(fontSize: 15.sp, color: AppColors.textSecondary, height: 1.6)),
+
+                            // Guidelines Button
+                            if (liveEvent.guidelinesUrl != null) ...[
+                              SizedBox(height: 24.h),
+                              OutlinedButton.icon(
+                                onPressed: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Downloading Guidelines PDF...')),
+                                  );
+                                },
+                                icon: const Icon(Icons.download_rounded),
+                                label: const Text('Download Event Guidelines'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(vertical: 12.h),
+                                  side: const BorderSide(color: AppColors.primary),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                                ),
+                              ),
+                            ],
+
+                            SizedBox(height: 100.h),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // --- BOTTOM BAR ---
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    padding: EdgeInsets.all(24.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, -5)),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.border),
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: IconButton(
+                            icon: Icon(_isFavorite ? Icons.favorite : Icons.favorite_border, color: _isFavorite ? Colors.pink : AppColors.textSecondary),
+                            onPressed: _toggleFavorite,
+                          ),
+                        ),
+                        SizedBox(width: 16.w),
+                        Expanded(
+                          child: _userId == null
+                              ? const SizedBox()
+                              : StreamBuilder<List<String>>(
+                            stream: _eventRepository.getRegisteredEventIdsStream(_userId!),
+                            initialData: const [],
+                            builder: (context, snapshot) {
+                              final isRegistered = snapshot.data?.contains(liveEvent.id) ?? false;
+
+                              // Disable if full AND user is NOT registered
+                              final isDisabled = isFull && !isRegistered;
+
+                              return SizedBox(
+                                height: 56.h,
+                                child: FilledButton(
+                                  onPressed: (_isActionLoading || isDisabled) ? null : () => _handleRegistrationAction(isRegistered),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: isRegistered
+                                        ? Colors.white
+                                        : (isDisabled ? Colors.grey : AppColors.primary),
+                                    foregroundColor: isRegistered ? AppColors.error : Colors.white,
+                                    side: isRegistered ? const BorderSide(color: AppColors.error) : null,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+                                  ),
+                                  child: _isActionLoading
+                                      ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                                      : Text(
+                                    isRegistered
+                                        ? 'Cancel Registration'
+                                        : (isDisabled ? 'Event Full' : 'Register Now'),
+                                    style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ],
-
-                      SizedBox(height: 100.h),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-
-          // --- BOTTOM BAR ---
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: EdgeInsets.all(24.w),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, -5)),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: AppColors.border),
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    child: IconButton(
-                      icon: Icon(_isFavorite ? Icons.favorite : Icons.favorite_border, color: _isFavorite ? Colors.pink : AppColors.textSecondary),
-                      onPressed: _toggleFavorite,
-                    ),
-                  ),
-                  SizedBox(width: 16.w),
-                  Expanded(
-                    child: _userId == null
-                        ? const SizedBox()
-                        : StreamBuilder<List<String>>(
-                      stream: _eventRepository.getRegisteredEventIdsStream(_userId!),
-                      initialData: const [],
-                      builder: (context, snapshot) {
-                        final isRegistered = snapshot.data?.contains(event.id) ?? false;
-                        return SizedBox(
-                          height: 56.h,
-                          child: FilledButton(
-                            onPressed: _isActionLoading ? null : () => _handleRegistrationAction(isRegistered),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: isRegistered ? Colors.white : AppColors.primary,
-                              foregroundColor: isRegistered ? AppColors.error : Colors.white,
-                              side: isRegistered ? const BorderSide(color: AppColors.error) : null,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-                            ),
-                            child: _isActionLoading
-                                ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                                : Text(
-                              isRegistered ? 'Cancel Registration' : 'Register Now',
-                              style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+              ],
+            );
+          }
       ),
     );
   }
@@ -397,8 +439,15 @@ class _InfoRow extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool isLink;
+  final Color? highlightColor;
 
-  const _InfoRow({required this.icon, required this.title, required this.subtitle, this.isLink = false});
+  const _InfoRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.isLink = false,
+    this.highlightColor,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -414,7 +463,14 @@ class _InfoRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title, style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-            Text(subtitle, style: TextStyle(fontSize: 13.sp, color: isLink ? AppColors.primary : AppColors.textSecondary, fontWeight: isLink ? FontWeight.w600 : FontWeight.normal)),
+            Text(
+                subtitle,
+                style: TextStyle(
+                    fontSize: 13.sp,
+                    color: highlightColor ?? (isLink ? AppColors.primary : AppColors.textSecondary),
+                    fontWeight: (isLink || highlightColor != null) ? FontWeight.w600 : FontWeight.normal
+                )
+            ),
           ],
         ),
       ],
