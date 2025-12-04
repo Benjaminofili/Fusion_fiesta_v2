@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -58,6 +60,15 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       _highlightEventsStream = _eventRepository.getEventsStream().asBroadcastStream();
       _upcomingEventsStream = _eventRepository.getEventsStream().asBroadcastStream();
     });
+  }
+
+  ImageProvider? _getProfileImage(String? path) {
+    if (path == null) return null;
+    if (path.startsWith('http')) {
+      return NetworkImage(path);
+    } else {
+      return FileImage(File(path));
+    }
   }
 
   @override
@@ -150,9 +161,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               CircleAvatar(
                 radius: 26.r,
                 backgroundColor: Colors.white24,
-                backgroundImage: user?.profilePictureUrl != null
-                    ? NetworkImage(user!.profilePictureUrl!)
-                    : null,
+                backgroundImage: _getProfileImage(user?.profilePictureUrl),
                 child: user?.profilePictureUrl == null
                     ? Icon(Icons.person, color: Colors.white, size: 28.sp)
                     : null,

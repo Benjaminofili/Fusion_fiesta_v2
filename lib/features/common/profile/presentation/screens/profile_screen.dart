@@ -1,3 +1,4 @@
+import 'dart:io'; // Required for File
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -80,6 +81,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // --- HELPER FOR IMAGES (Handles Local File vs Network URL) ---
+  ImageProvider? _getProfileImage(String? path) {
+    if (path == null || path.isEmpty) return null;
+    if (path.startsWith('http')) {
+      return NetworkImage(path);
+    } else {
+      return FileImage(File(path));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_currentUser == null) {
@@ -121,9 +132,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: CircleAvatar(
                       radius: 50,
                       backgroundColor: AppColors.primary.withOpacity(0.1),
-                      backgroundImage: _currentUser?.profilePictureUrl != null
-                          ? NetworkImage(_currentUser!.profilePictureUrl!)
-                          : null,
+                      // --- FIX APPLIED HERE: Use the helper method ---
+                      backgroundImage: _getProfileImage(_currentUser?.profilePictureUrl),
                       child: _currentUser?.profilePictureUrl == null
                           ? const Icon(Icons.person, size: 50, color: AppColors.primary)
                           : null,
