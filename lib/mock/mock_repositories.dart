@@ -34,6 +34,13 @@ class MockAuthRepository implements AuthRepository {
     return _currentUser!;
   }
 
+  // --- ADDED THIS MISSING METHOD ---
+  @override
+  Future<void> changePassword(String email, String currentPassword, String newPassword) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    // In this simple mock, we assume success
+  }
+
   @override
   Future<User> signUp(User user, String password) async {
     await Future<void>.delayed(const Duration(milliseconds: 300));
@@ -153,15 +160,13 @@ class MockEventRepository implements EventRepository {
   Future<void> registerForEvent(String eventId, String userId) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
-    // --- NEW: CAPACITY CHECK BACKEND LOGIC ---
     final index = _events.indexWhere((e) => e.id == eventId);
     if (index != -1) {
       final event = _events[index];
       if (event.registrationLimit != null && event.registeredCount >= event.registrationLimit!) {
-        throw Exception("Event is full"); // This will be caught by UI and shown as SnackBar
+        throw Exception("Event is full");
       }
     }
-    // -----------------------------------------
 
     if (!_registrations.containsKey(userId)) _registrations[userId] = {};
     _registrations[userId]!.add(eventId);

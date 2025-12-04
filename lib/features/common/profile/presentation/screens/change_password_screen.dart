@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/services/auth_service.dart';
+import '../../../../../core/widgets/app_text_field.dart'; // NEW IMPORT
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -18,17 +21,29 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   Future<void> _updatePassword() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
 
-    // Simulate Backend API Call
-    await Future.delayed(const Duration(seconds: 2));
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password changed successfully!'), backgroundColor: AppColors.success),
+    try {
+      final authService = serviceLocator<AuthService>();
+      await authService.changePassword(
+          _currentPassController.text,
+          _newPassController.text
       );
-      context.pop();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Password updated! Please use new password next time.'), backgroundColor: AppColors.success),
+        );
+        context.pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceAll('AppFailure', '')), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if(mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -47,15 +62,36 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           key: _formKey,
           child: Column(
             children: [
-              _buildPassField('Current Password', _currentPassController),
+              AppTextField(
+                controller: _currentPassController,
+                label: 'Current Password',
+                prefixIcon: Icons.lock_outline,
+                isPassword: true,
+                validator: (v) => v!.isEmpty ? 'Required' : null,
+              ),
               const SizedBox(height: 16),
-              _buildPassField('New Password', _newPassController),
+
+              AppTextField(
+                controller: _newPassController,
+                label: 'New Password',
+                prefixIcon: Icons.lock_outline,
+                isPassword: true,
+                validator: (v) => v!.length < 6 ? 'Min 6 characters' : null,
+              ),
               const SizedBox(height: 16),
-              _buildPassField('Confirm New Password', _confirmPassController, validator: (val) {
-                if (val != _newPassController.text) return 'Passwords do not match';
-                return null;
-              }),
+
+              AppTextField(
+                controller: _confirmPassController,
+                label: 'Confirm New Password',
+                prefixIcon: Icons.lock_outline,
+                isPassword: true,
+                validator: (val) {
+                  if (val != _newPassController.text) return 'Passwords do not match';
+                  return null;
+                },
+              ),
               const SizedBox(height: 32),
+
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -74,19 +110,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildPassField(String label, TextEditingController controller, {String? Function(String?)? validator}) {
-    return TextFormField(
-      controller: controller,
-      obscureText: true,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: const Icon(Icons.lock_outline),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      validator: validator ?? (v) => v!.length < 6 ? 'Min 6 characters' : null,
     );
   }
 }

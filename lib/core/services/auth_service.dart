@@ -64,6 +64,14 @@ class AuthService {
     _userController.add(user);
   }
 
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    final user = _currentUser;
+    if (user == null) throw Exception('No user logged in');
+
+    await _repository.changePassword(user.email, currentPassword, newPassword);
+    // No need to update session for password change, but next login will require it.
+  }
+  
   void dispose() {
     _userController.close();
   }

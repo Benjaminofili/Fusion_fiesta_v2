@@ -10,11 +10,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
-import '../../../../../core/constants/app_sizes.dart';
 import '../../../../../core/constants/app_roles.dart';
 import '../../../../../core/services/auth_service.dart';
 import '../../../../../data/models/user.dart';
 import '../../../../../core/widgets/upload_picker.dart';
+import '../../../../../core/widgets/app_text_field.dart';
+
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -39,8 +40,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // State Variables
   AppRole _selectedRole = AppRole.visitor; // Default: Student Visitor
   bool _isLoading = false;
-  bool _isPasswordVisible = false;
-  bool _isConfirmPasswordVisible = false;
 
   // File Placeholders
   String? _profilePicturePath;
@@ -254,32 +253,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     SizedBox(height: 24.h),
 
                     // --- 3. COMMON FIELDS (Name, Email, Mobile) ---
-                    TextFormField(
+                    AppTextField(
                       controller: _nameController,
+                      label: 'Full Name',
+                      prefixIcon: Icons.person_outline,
                       textCapitalization: TextCapitalization.words,
-                      decoration: _inputDecoration('Full Name', Icons.person_outline),
                       validator: (value) => (value?.length ?? 0) > 2 ? null : 'Name too short',
                     ),
                     SizedBox(height: 16.h),
 
-                    TextFormField(
+                    AppTextField(
                       controller: _emailController,
+                      label: 'Email Address',
+                      prefixIcon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: _inputDecoration('Email Address', Icons.email_outlined),
                       validator: (value) {
                         if (value == null || !value.contains('@')) return 'Invalid email';
-                        if (_isStaff && !value.endsWith('.edu')) {
-                          return 'Staff must use institutional email (.edu)';
-                        }
+                        if (_isStaff && !value.endsWith('.edu')) return 'Staff must use .edu email';
                         return null;
                       },
                     ),
                     SizedBox(height: 16.h),
 
-                    TextFormField(
+                    AppTextField(
                       controller: _mobileController,
+                      label: 'Mobile Number',
+                      prefixIcon: Icons.phone_android,
                       keyboardType: TextInputType.phone,
-                      decoration: _inputDecoration('Mobile Number', Icons.phone_android),
                       validator: (value) => (value?.length ?? 0) > 9 ? null : 'Invalid mobile number',
                     ),
                     SizedBox(height: 16.h),
@@ -288,10 +288,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     // FIX: Moved Department here. It is only visible for Participants & Staff.
 
                     if (_isDepartmentRequired) ...[
-                      TextFormField(
+                      AppTextField(
                         controller: _departmentController,
+                        label: 'Department',
+                        prefixIcon: Icons.business,
                         textCapitalization: TextCapitalization.words,
-                        decoration: _inputDecoration('Department', Icons.business),
                         validator: (value) => _isDepartmentRequired && (value?.length ?? 0) < 2
                             ? 'Department is required'
                             : null,
@@ -304,11 +305,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       Text('Participant Verification', style: Theme.of(context).textTheme.titleMedium),
                       SizedBox(height: 16.h),
 
-                      TextFormField(
+                      AppTextField(
                         controller: _enrolmentController,
-                        decoration: _inputDecoration('Enrolment Number', Icons.badge),
+                        label: 'Enrolment Number',
+                        prefixIcon: Icons.badge,
                         validator: (value) => _isStudentParticipant && (value?.isEmpty ?? true)
-                            ? 'Enrolment Number is required'
+                            ? 'Required'
                             : null,
                       ),
                       SizedBox(height: 16.h),
@@ -345,22 +347,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     SizedBox(height: 24.h),
 
                     // --- 5. PASSWORD FIELDS ---
-                    TextFormField(
+                    AppTextField(
                       controller: _passwordController,
-                      obscureText: !_isPasswordVisible,
-                      decoration: _passwordDecoration('Password', _isPasswordVisible, () {
-                        setState(() => _isPasswordVisible = !_isPasswordVisible);
-                      }),
+                      label: 'Password',
+                      prefixIcon: Icons.lock_outline,
+                      isPassword: true,
                       validator: (value) => (value?.length ?? 0) > 5 ? null : 'Min 6 characters',
                     ),
                     SizedBox(height: 16.h),
 
-                    TextFormField(
+                    AppTextField(
                       controller: _confirmPasswordController,
-                      obscureText: !_isConfirmPasswordVisible,
-                      decoration: _passwordDecoration('Confirm Password', _isConfirmPasswordVisible, () {
-                        setState(() => _isConfirmPasswordVisible = !_isConfirmPasswordVisible);
-                      }),
+                      label: 'Confirm Password',
+                      prefixIcon: Icons.lock_outline,
+                      isPassword: true,
                       validator: (value) {
                         if (value != _passwordController.text) return 'Passwords do not match';
                         return null;
@@ -427,31 +427,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: AppColors.textSecondary),
+      prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 20.sp), // Added size
       filled: true,
       fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+      contentPadding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 20.w), // Added .h .w
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.r), // Added .r
         borderSide: const BorderSide(color: AppColors.border),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.r), // Added .r
         borderSide: const BorderSide(color: AppColors.border),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.r), // Added .r
         borderSide: const BorderSide(color: AppColors.primary, width: 2),
       ),
     );
   }
 
-  InputDecoration _passwordDecoration(String label, bool visible, VoidCallback onToggle) {
-    return _inputDecoration(label, Icons.lock_outline).copyWith(
-      suffixIcon: IconButton(
-        icon: Icon(visible ? Icons.visibility : Icons.visibility_off, color: AppColors.textSecondary),
-        onPressed: onToggle,
-      ),
-    );
-  }
 }

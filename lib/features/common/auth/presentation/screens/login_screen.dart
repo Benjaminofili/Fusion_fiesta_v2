@@ -7,6 +7,7 @@ import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
 import '../../../../../core/services/auth_service.dart';
+import '../../../../../core/widgets/app_text_field.dart'; // Import the new widget
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,14 +19,11 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Pre-filled for testing convenience
   final _emailController = TextEditingController(text: 'student@fusionfiesta.dev');
   final _passwordController = TextEditingController(text: 'password');
 
   final AuthService _authService = serviceLocator<AuthService>();
-
   bool _isLoading = false;
-  bool _isPasswordVisible = false;
 
   @override
   void dispose() {
@@ -34,12 +32,9 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // --- UPDATED LOGIN METHOD ---
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
-
     try {
       await _authService.signIn(_emailController.text.trim(), _passwordController.text);
       if (!mounted) return;
@@ -52,7 +47,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // --- UPDATED GUEST LOGIN ---
   Future<void> _loginAsGuest() async {
     setState(() => _isLoading = true);
     try {
@@ -67,40 +61,28 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // --- NEW: REUSABLE ERROR HANDLER ---
   void _showErrorSnackBar(Object error) {
-    // 1. Clean the error message
     String message = error.toString();
-
-    // Remove technical wrappers like "AppFailure(...)" or "Exception:"
     if (message.contains('AppFailure')) {
       message = message.replaceAll('AppFailure(', '').replaceAll(')', '');
     } else {
       message = message.replaceAll('Exception:', '').trim();
     }
 
-    // 2. Determine if we need a "Register" action button
     final isUserNotFound = message.toLowerCase().contains('register') ||
         message.toLowerCase().contains('not found');
 
-    // 3. Show Improved SnackBar
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
             const Icon(Icons.error_outline, color: Colors.white),
             SizedBox(width: 12.w),
-            Expanded(
-              child: Text(
-                message,
-                style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w500),
-              ),
-            ),
+            Expanded(child: Text(message, style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w500))),
           ],
         ),
         backgroundColor: AppColors.error,
-        behavior: SnackBarBehavior.floating, // Floats nicely above bottom
-        elevation: 4,
+        behavior: SnackBarBehavior.floating,
         margin: EdgeInsets.all(16.w),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
         action: isUserNotFound
@@ -131,7 +113,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // --- LOGO & HEADER ---
                     SizedBox(height: 20.h),
                     Hero(
                       tag: 'app_logo',
@@ -161,56 +142,39 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text(
                       'Sign in to access your dashboard',
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
                     ),
                     SizedBox(height: 48.h),
 
-                    // --- EMAIL FIELD ---
-                    TextFormField(
+                    // --- NEW WIDGET: EMAIL ---
+                    AppTextField(
                       controller: _emailController,
+                      label: 'Email',
+                      hint: 'Enter your college email',
+                      prefixIcon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
-                      style: const TextStyle(color: AppColors.textPrimary),
-                      decoration: _inputDecoration('Email', Icons.email_outlined),
                       validator: (value) => value?.contains('@') == true ? null : 'Please enter a valid email',
                     ),
                     SizedBox(height: 20.h),
 
-                    // --- PASSWORD FIELD ---
-                    TextFormField(
+                    // --- NEW WIDGET: PASSWORD ---
+                    AppTextField(
                       controller: _passwordController,
-                      obscureText: !_isPasswordVisible,
-                      style: const TextStyle(color: AppColors.textPrimary),
-                      decoration: _inputDecoration('Password', Icons.lock_outline).copyWith(
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
-                            color: AppColors.textSecondary,
-                          ),
-                          onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
-                        ),
-                      ),
+                      label: 'Password',
+                      prefixIcon: Icons.lock_outline,
+                      isPassword: true, // Auto-handles visibility icon and state
                       validator: (value) => (value?.length ?? 0) > 5 ? null : 'Min 6 characters',
                     ),
 
-                    // --- FORGOT PASSWORD ---
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () => context.push(AppRoutes.forgotPassword),
-                        child: const Text(
-                          'Forgot Password?',
-                          style: TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        child: const Text('Forgot Password?', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
                       ),
                     ),
                     SizedBox(height: 24.h),
 
-                    // --- SIGN IN BUTTON ---
                     SizedBox(
                       height: 56.h,
                       child: FilledButton(
@@ -222,15 +186,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         child: _isLoading
                             ? const CircularProgressIndicator(color: Colors.white)
-                            : Text(
-                          'Sign In',
-                          style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
-                        ),
+                            : Text('Sign In', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
                       ),
                     ),
                     SizedBox(height: 16.h),
 
-                    // --- GUEST LOGIN BUTTON ---
                     SizedBox(
                       height: 56.h,
                       child: OutlinedButton(
@@ -239,35 +199,21 @@ class _LoginScreenState extends State<LoginScreen> {
                           side: const BorderSide(color: AppColors.primary),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
-                        child: Text(
-                          'Continue as Guest',
-                          style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
-                        ),
+                        child: Text('Continue as Guest', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
                       ),
                     ),
                     SizedBox(height: 24.h),
 
-                    // --- REGISTER LINK ---
                     Center(
                       child: GestureDetector(
                         onTap: () => context.push(AppRoutes.register),
                         child: RichText(
                           textAlign: TextAlign.center,
                           text: TextSpan(
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.textSecondary,
-                              fontSize: 14.sp,
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary, fontSize: 14.sp),
                             children: [
                               const TextSpan(text: "Don't have an account? "),
-                              TextSpan(
-                                text: 'Register',
-                                style: TextStyle(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14.sp,
-                                ),
-                              ),
+                              TextSpan(text: 'Register', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14.sp)),
                             ],
                           ),
                         ),
@@ -279,28 +225,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      hintText: label == 'Email' ? 'Enter your college email' : null,
-      prefixIcon: Icon(icon, color: AppColors.textSecondary),
-      filled: true,
-      fillColor: Colors.white,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.primary, width: 2),
       ),
     );
   }

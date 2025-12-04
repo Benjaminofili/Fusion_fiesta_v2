@@ -8,6 +8,7 @@ import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
 import '../../../../../core/services/auth_service.dart';
+import '../../../../../core/services/storage_service.dart';
 import '../../../../../core/widgets/event_card.dart';
 import '../../../../../data/models/event.dart';
 import '../../../../../data/models/user.dart';
@@ -23,52 +24,25 @@ class StudentDashboardScreen extends StatefulWidget {
 class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   final EventRepository _eventRepository = serviceLocator<EventRepository>();
   final AuthService _authService = serviceLocator<AuthService>();
+  final StorageService _storageService = serviceLocator<StorageService>();
 
-  User? _user;
-
-  // Streams for Lists
   late Stream<List<Event>> _highlightEventsStream;
   late Stream<List<Event>> _upcomingEventsStream;
 
-  // ✅ FIX: Initialize these streams properly
-  Stream<List<String>>? _registeredIdsStream;
-  Stream<List<String>>? _favoriteIdsStream;
-
-  // Static Counters (can remain for certificates/feedback)
+  // Counters (Mocked for now)
   int _certificateCount = 0;
   int _feedbackCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadUserData();
     _loadDashboardStats();
-
     _highlightEventsStream = _eventRepository.getEventsStream().asBroadcastStream();
     _upcomingEventsStream = _eventRepository.getEventsStream().asBroadcastStream();
   }
 
-  Future<void> _loadUserData() async {
-    final user = await _authService.currentUser;
-    if (mounted) {
-      setState(() {
-        _user = user;
-
-        // ✅ FIX: Initialize streams once user is loaded
-        if (user != null) {
-          _registeredIdsStream = _eventRepository
-              .getRegisteredEventIdsStream(user.id)
-              .asBroadcastStream();
-
-          _favoriteIdsStream = _eventRepository
-              .getFavoriteEventIdsStream(user.id)
-              .asBroadcastStream();
-        }
-      });
-    }
-  }
-
   Future<void> _loadDashboardStats() async {
+    // Simulate fetching stats
     await Future.delayed(const Duration(milliseconds: 500));
     if (mounted) {
       setState(() {
@@ -83,63 +57,79 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     setState(() {
       _highlightEventsStream = _eventRepository.getEventsStream().asBroadcastStream();
       _upcomingEventsStream = _eventRepository.getEventsStream().asBroadcastStream();
-
-      // ✅ FIX: Refresh user streams too
-      if (_user != null) {
-        _registeredIdsStream = _eventRepository
-            .getRegisteredEventIdsStream(_user!.id)
-            .asBroadcastStream();
-
-        _favoriteIdsStream = _eventRepository
-            .getFavoriteEventIdsStream(_user!.id)
-            .asBroadcastStream();
-      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        color: AppColors.primary,
-        child: CustomScrollView(
-          slivers: [
-            // --- 1. HEADER SECTION & CARDS ---
-            SliverToBoxAdapter(
-              child: Stack(
-                children: [
-                  Column(
+    // 1. GLOBAL USER STREAM: Listens to any profile changes instantly
+    return StreamBuilder<User?>(
+      stream: _authService.userStream,
+      initialData: _storageService.getUser(),
+      builder: (context, userSnapshot) {
+        final user = userSnapshot.data;
+
+        // 2. USER-DEPENDENT STREAMS
+        // Only initialize these if we have a valid user ID
+        final registeredIdsStream = user != null
+            ? _eventRepository.getRegisteredEventIdsStream(user.id).asBroadcastStream()
+            : const Stream<List<String>>.empty();
+
+        final favoriteIdsStream = user != null
+            ? _eventRepository.getFavoriteEventIdsStream(user.id).asBroadcastStream()
+            : const Stream<List<String>>.empty();
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFF9FAFB),
+          body: RefreshIndicator(
+            onRefresh: _refresh,
+            color: AppColors.primary,
+            child: CustomScrollView(
+              slivers: [
+                // --- HEADER ---
+                SliverToBoxAdapter(
+                  child: Stack(
                     children: [
-                      _buildHeader(context),
-                      SizedBox(height: 55.h),
+                      Column(
+                        children: [
+                          _buildHeader(context, user),
+                          SizedBox(height: 55.h),
+                        ],
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        child: _buildQuickAccessSection(
+                            context,
+                            registeredIdsStream,
+                            favoriteIdsStream
+                        ),
+                      ),
                     ],
                   ),
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: _buildQuickAccessSection(context),
-                  ),
-                ],
-              ),
-            ),
+                ),
 
-            SliverToBoxAdapter(child: SizedBox(height: 24.h)),
-            SliverToBoxAdapter(child: _buildNextEventSection(context)),
-            _buildUpcomingEventsSection(context),
-            SliverToBoxAdapter(child: SizedBox(height: 100.h)),
-          ],
-        ),
-      ),
+                SliverToBoxAdapter(child: SizedBox(height: 24.h)),
+
+                // --- NEXT EVENT ---
+                SliverToBoxAdapter(child: _buildNextEventSection(context)),
+
+                // --- UPCOMING EVENTS ---
+                _buildUpcomingEventsSection(context),
+
+                SliverToBoxAdapter(child: SizedBox(height: 100.h)),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, User? user) {
     return Container(
       width: double.infinity,
-      // Padding ensures content inside header (text/avatar) doesn't touch the cards
       padding: EdgeInsets.only(bottom: 60.h),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -160,10 +150,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               CircleAvatar(
                 radius: 26.r,
                 backgroundColor: Colors.white24,
-                backgroundImage: _user?.profilePictureUrl != null
-                    ? NetworkImage(_user!.profilePictureUrl!)
+                backgroundImage: user?.profilePictureUrl != null
+                    ? NetworkImage(user!.profilePictureUrl!)
                     : null,
-                child: _user?.profilePictureUrl == null
+                child: user?.profilePictureUrl == null
                     ? Icon(Icons.person, color: Colors.white, size: 28.sp)
                     : null,
               ),
@@ -180,8 +170,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
+                    // Live Name Update
                     Text(
-                      _user?.name ?? 'Student',
+                      user?.name ?? 'Student',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 20.sp,
@@ -201,7 +192,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 ),
                 child: IconButton(
                   icon: Icon(Icons.notifications_outlined, color: Colors.white, size: 24.sp),
-                  onPressed: () { context.push(AppRoutes.notifications); },
+                  onPressed: () => context.push(AppRoutes.notifications),
                 ),
               ),
             ],
@@ -211,14 +202,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     );
   }
 
-  Widget _buildQuickAccessSection(BuildContext context) {
-    if (_registeredIdsStream == null || _favoriteIdsStream == null) {
-      return SizedBox(
-        height: 110.h,
-        child: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
+  Widget _buildQuickAccessSection(
+      BuildContext context,
+      Stream<List<String>> registeredStream,
+      Stream<List<String>> favoriteStream,
+      ) {
     return SizedBox(
       height: 110.h,
       child: ListView(
@@ -226,9 +214,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         children: [
-          // 1. Registered Card (Now properly streamed)
+          // 1. Registered (Live Stream)
           StreamBuilder<List<String>>(
-            stream: _registeredIdsStream, // ✅ Now initialized
+            stream: registeredStream,
             initialData: const [],
             builder: (context, snapshot) {
               final count = snapshot.data?.length ?? 0;
@@ -243,7 +231,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           ),
           SizedBox(width: 12.w),
 
-          // 2. Certificates (Static for now)
+          // 2. Certificates
           _QuickAccessCard(
             label: 'Certificates',
             count: _certificateCount.toString().padLeft(2, '0'),
@@ -253,9 +241,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           ),
           SizedBox(width: 12.w),
 
-          // 3. Favorites Card (Now properly streamed)
+          // 3. Favorites (Live Stream)
           StreamBuilder<List<String>>(
-            stream: _favoriteIdsStream, // ✅ Now initialized
+            stream: favoriteStream,
             initialData: const [],
             builder: (context, snapshot) {
               final count = snapshot.data?.length ?? 0;
@@ -270,7 +258,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           ),
           SizedBox(width: 12.w),
 
-          // 4. Feedback (Static)
+          // 4. Feedback
           _QuickAccessCard(
             label: 'Feedback',
             count: _feedbackCount.toString().padLeft(2, '0'),
@@ -301,8 +289,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16.r),
-              border: Border.all(
-                  color: AppColors.primary.withOpacity(0.3), width: 1),
+              border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 1),
               color: AppColors.primary.withOpacity(0.05),
             ),
             child: StreamBuilder<List<Event>>(
@@ -311,14 +298,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return Padding(
                     padding: EdgeInsets.all(16.w),
-                    child: const Text(
-                        "You haven't registered for any upcoming events."),
+                    child: const Text("You haven't registered for any upcoming events."),
                   );
                 }
                 return EventCard(
                   event: snapshot.data!.first,
-                  onTap: () => context.push('${AppRoutes.events}/details',
-                      extra: snapshot.data!.first),
+                  onTap: () => context.push('${AppRoutes.events}/details', extra: snapshot.data!.first),
                 );
               },
             ),
@@ -362,29 +347,22 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               return const Center(child: Text('No events found.'));
             }
 
-            final events = snapshot.data!.length > 1
-                ? snapshot.data!.sublist(1)
-                : <Event>[];
+            final events = snapshot.data!.length > 1 ? snapshot.data!.sublist(1) : <Event>[];
 
             if (events.isEmpty) {
               return Padding(
                 padding: EdgeInsets.all(24.w),
-                child: const Center(
-                    child: Text("Check back later for more events!")),
+                child: const Center(child: Text("Check back later for more events!")),
               );
             }
 
             return Column(
               children: events.map((event) {
                 return Padding(
-                  padding:
-                  EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
+                  padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
                   child: EventCard(
                     event: event,
-                    onTap: () => context.push(
-                      '${AppRoutes.events}/details',
-                      extra: event,
-                    ),
+                    onTap: () => context.push('${AppRoutes.events}/details', extra: event),
                   ),
                 ).animate().fadeIn().slideY(begin: 0.1);
               }).toList(),
