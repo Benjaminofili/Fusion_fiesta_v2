@@ -206,12 +206,6 @@ class MockEventRepository implements EventRepository {
   Future<Event> getEvent(String id) async => _events.firstWhere((e) => e.id == id);
 
   @override
-  Future<List<GalleryItem>> fetchGallery() async {
-    await Future.delayed(const Duration(milliseconds: 150));
-    return [];
-  }
-
-  @override
   Future<int> getCertificateCount(String userId) async => 3;
 
   @override

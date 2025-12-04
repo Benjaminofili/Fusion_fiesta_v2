@@ -32,6 +32,10 @@ import '../../features/student/registered_events/presentation/screens/registered
 import '../../features/student/certificates/presentation/screens/certificates_screen.dart';
 import '../../features/student/feedback/presentation/screens/feedback_form_screen.dart';
 import '../../features/student/favorites/presentation/screens/favorites_screen.dart';
+import '../../features/student/saved_media/presentation/screens/saved_media_screen.dart';
+import '../../features/common/gallery/presentation/screens/gallery_image_viewer.dart';
+import '../../data/models/gallery_item.dart';
+
 
 import 'main_navigation_shell.dart';
 
@@ -126,7 +130,22 @@ class AppRouter {
       ),
       GoRoute(
         path: AppRoutes.gallery,
-        builder: (context, state) => GalleryScreen(),
+        builder: (context, state) => const GalleryScreen(),
+        routes: [
+          // 1. Saved Media Route
+          GoRoute(
+            path: 'saved', // /gallery/saved
+            builder: (context, state) => const SavedMediaScreen(),
+          ),
+          // 2. Viewer Route
+          GoRoute(
+            path: 'view', // /gallery/view
+            builder: (context, state) {
+              final item = state.extra as GalleryItem;
+              return GalleryImageViewer(item: item);
+            },
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoutes.profile,

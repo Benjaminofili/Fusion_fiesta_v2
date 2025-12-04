@@ -6,7 +6,6 @@ abstract class EventRepository {
   Stream<List<Event>> getEventsStream();
 
   Future<Event> getEvent(String id);
-  Future<List<GalleryItem>> fetchGallery();
 
   // --- USER INTERACTION STREAMS ---
   Stream<List<String>> getRegisteredEventIdsStream(String userId);
