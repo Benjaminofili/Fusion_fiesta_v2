@@ -25,6 +25,8 @@ import '../../features/common/information/presentation/screens/faq_screen.dart';
 import '../../features/common/information/presentation/screens/sitemap_screen.dart';
 import '../../features/common/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/common/profile/presentation/screens/profile_screen.dart';
+import '../../features/common/profile/presentation/screens/edit_profile_screen.dart';
+import '../../features/common/profile/presentation/screens/change_password_screen.dart';
 import '../../features/common/notifications/presentation/screens/notifications_screen.dart';
 
 // --- Student Screens ---
@@ -150,6 +152,17 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.profile,
         builder: (context, state) => const ProfileScreen(),
+        routes: [
+          // Add Sub-routes for Profile
+          GoRoute(
+            path: 'edit',
+            builder: (context, state) => const EditProfileScreen(),
+          ),
+          GoRoute(
+            path: 'change-password',
+            builder: (context, state) => const ChangePasswordScreen(),
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoutes.about,
