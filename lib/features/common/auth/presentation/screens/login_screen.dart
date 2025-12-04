@@ -4,9 +4,8 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../app/di/service_locator.dart';
-import '../../../../../core/constants/app_colors.dart'; // Uses your defined colors
+import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
-import '../../../../../core/constants/app_sizes.dart';
 import '../../../../../core/services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -19,7 +18,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Pre-filled for testing convenience (remove before launch)
+  // Pre-filled for testing convenience
   final _emailController = TextEditingController(text: 'student@fusionfiesta.dev');
   final _passwordController = TextEditingController(text: 'password');
 
@@ -35,54 +34,85 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // --- UPDATED LOGIN METHOD ---
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
-      await _authService.signIn(_emailController.text, _passwordController.text);
+      await _authService.signIn(_emailController.text.trim(), _passwordController.text);
       if (!mounted) return;
-      // Navigation is handled by the router redirect,
-      // but we explicitly go to main just in case.
       context.go(AppRoutes.main);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Login Failed: ${e.toString()}'),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (!mounted) return;
+      _showErrorSnackBar(e);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _performLogin(String email, String password) async {
+  // --- UPDATED GUEST LOGIN ---
+  Future<void> _loginAsGuest() async {
     setState(() => _isLoading = true);
-
     try {
-      await _authService.signIn(email, password);
+      await _authService.loginAsGuest();
       if (!mounted) return;
       context.go(AppRoutes.main);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Login Failed: ${e.toString()}'),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (!mounted) return;
+      _showErrorSnackBar(e);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // --- GUEST LOGIN ACTION ---
-  void _loginAsGuest() {
-    // Use dummy credentials to create a Visitor session
-    _performLogin('guest@fusionfiesta.com', 'guest123');
+  // --- NEW: REUSABLE ERROR HANDLER ---
+  void _showErrorSnackBar(Object error) {
+    // 1. Clean the error message
+    String message = error.toString();
+
+    // Remove technical wrappers like "AppFailure(...)" or "Exception:"
+    if (message.contains('AppFailure')) {
+      message = message.replaceAll('AppFailure(', '').replaceAll(')', '');
+    } else {
+      message = message.replaceAll('Exception:', '').trim();
+    }
+
+    // 2. Determine if we need a "Register" action button
+    final isUserNotFound = message.toLowerCase().contains('register') ||
+        message.toLowerCase().contains('not found');
+
+    // 3. Show Improved SnackBar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating, // Floats nicely above bottom
+        elevation: 4,
+        margin: EdgeInsets.all(16.w),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+        action: isUserNotFound
+            ? SnackBarAction(
+          label: 'Register',
+          textColor: Colors.white,
+          backgroundColor: Colors.white.withOpacity(0.2),
+          onPressed: () => context.push(AppRoutes.register),
+        )
+            : null,
+      ),
+    );
   }
 
   @override
@@ -92,25 +122,25 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: EdgeInsets.all(24.w), // Responsive padding
+            padding: EdgeInsets.all(24.w),
             child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: 400.w), // Cap width for tablets
+              constraints: BoxConstraints(maxWidth: 400.w),
               child: Form(
                 key: _formKey,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // --- 1. LOGO & HEADER ---
+                    // --- LOGO & HEADER ---
                     SizedBox(height: 20.h),
                     Hero(
                       tag: 'app_logo',
                       child: SizedBox(
                         height: 160.h,
                         child: Image.asset(
-                          'assets/images/logo.webp', // Ensure you have this file
+                          'assets/images/logo.webp',
                           fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) =>  Icon(
+                          errorBuilder: (context, error, stackTrace) => Icon(
                             FontAwesomeIcons.graduationCap,
                             size: 80.sp,
                             color: AppColors.primary,
@@ -118,7 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                     SizedBox(height: 32.h),
+                    SizedBox(height: 32.h),
                     Text(
                       'Welcome Back!',
                       textAlign: TextAlign.center,
@@ -127,7 +157,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: AppColors.textPrimary,
                       ),
                     ),
-                     SizedBox(height: 8.h),
+                    SizedBox(height: 8.h),
                     Text(
                       'Sign in to access your dashboard',
                       textAlign: TextAlign.center,
@@ -135,44 +165,24 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: AppColors.textSecondary,
                       ),
                     ),
-                     SizedBox(height: 48.h),
+                    SizedBox(height: 48.h),
 
-                    // --- 2. EMAIL FIELD ---
+                    // --- EMAIL FIELD ---
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       style: const TextStyle(color: AppColors.textPrimary),
-                      decoration: InputDecoration(
-                        labelText: 'Email',
-                        hintText: 'Enter your college email',
-                        prefixIcon: const Icon(Icons.email_outlined, color: AppColors.textSecondary),
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.border),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.border),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.primary, width: 2),
-                        ),
-                      ),
+                      decoration: _inputDecoration('Email', Icons.email_outlined),
                       validator: (value) => value?.contains('@') == true ? null : 'Please enter a valid email',
                     ),
-                     SizedBox(height: 20.h),
+                    SizedBox(height: 20.h),
 
-                    // --- 3. PASSWORD FIELD ---
+                    // --- PASSWORD FIELD ---
                     TextFormField(
                       controller: _passwordController,
                       obscureText: !_isPasswordVisible,
                       style: const TextStyle(color: AppColors.textPrimary),
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
+                      decoration: _inputDecoration('Password', Icons.lock_outline).copyWith(
                         suffixIcon: IconButton(
                           icon: Icon(
                             _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
@@ -180,31 +190,15 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
                         ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.border),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.border),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.primary, width: 2),
-                        ),
                       ),
-                      validator: (value) => (value?.length ?? 0) > 5 ? null : 'Password must be at least 6 characters',
+                      validator: (value) => (value?.length ?? 0) > 5 ? null : 'Min 6 characters',
                     ),
 
-                    // --- 4. FORGOT PASSWORD LINK ---
+                    // --- FORGOT PASSWORD ---
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () {
-                          context.push(AppRoutes.forgotPassword);
-                        },
+                        onPressed: () => context.push(AppRoutes.forgotPassword),
                         child: const Text(
                           'Forgot Password?',
                           style: TextStyle(
@@ -214,32 +208,29 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                     SizedBox(height: 24.h),
+                    SizedBox(height: 24.h),
 
-                    // --- 5. LOGIN BUTTON ---
+                    // --- SIGN IN BUTTON ---
                     SizedBox(
                       height: 56.h,
                       child: FilledButton(
                         onPressed: _isLoading ? null : _login,
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           elevation: 2,
                         ),
                         child: _isLoading
-                            ?  CircularProgressIndicator(color: Colors.white)
-                            :  Text(
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : Text(
                           'Sign In',
                           style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
-
                     SizedBox(height: 16.h),
 
-                    // --- NEW: CONTINUE AS GUEST BUTTON ---
+                    // --- GUEST LOGIN BUTTON ---
                     SizedBox(
                       height: 56.h,
                       child: OutlinedButton(
@@ -248,14 +239,15 @@ class _LoginScreenState extends State<LoginScreen> {
                           side: const BorderSide(color: AppColors.primary),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
-                        child: Text('Continue as Guest', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                        child: Text(
+                          'Continue as Guest',
+                          style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
-
                     SizedBox(height: 24.h),
 
-                    // --- 6. REGISTER LINK ---
-                    // Replace the entire Row(...) at the bottom with this:
+                    // --- REGISTER LINK ---
                     Center(
                       child: GestureDetector(
                         onTap: () => context.push(AppRoutes.register),
@@ -264,7 +256,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           text: TextSpan(
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: AppColors.textSecondary,
-                              fontSize: 14.sp, // Responsive font
+                              fontSize: 14.sp,
                             ),
                             children: [
                               const TextSpan(text: "Don't have an account? "),
@@ -281,13 +273,34 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-
                   ],
                 ),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      hintText: label == 'Email' ? 'Enter your college email' : null,
+      prefixIcon: Icon(icon, color: AppColors.textSecondary),
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.primary, width: 2),
       ),
     );
   }

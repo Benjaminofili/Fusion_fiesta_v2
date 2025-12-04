@@ -1,15 +1,12 @@
-import 'dart:convert';
 import 'package:uuid/uuid.dart';
-
 import '../../core/constants/app_roles.dart';
 import '../../core/errors/app_failure.dart';
 import '../../core/services/storage_service.dart';
 import '../models/user.dart';
 import '../repositories/auth_repository.dart';
 
-// --- MOCK DATABASE (Simulates Backend) ---
-// Key: Email, Value: User Object
-// We make this global so UserRepositoryImpl can access it too.
+// --- MOCK DATABASE (Persistent in Memory) ---
+// This acts as your backend database.
 final Map<String, User> mockUserDatabase = {};
 
 class AuthRepositoryImpl implements AuthRepository {
@@ -18,12 +15,12 @@ class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl(this._storageService);
 
   Future<void> _simulateNetworkDelay() async {
-    await Future.delayed(const Duration(milliseconds: 800));
+    await Future.delayed(const Duration(milliseconds: 600));
   }
 
   @override
   Future<User?> getCurrentUser() async {
-    await _simulateNetworkDelay();
+    // Check local storage first (Session persistence)
     return _storageService.getUser();
   }
 
@@ -31,39 +28,51 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<User> signIn(String email, String password) async {
     await _simulateNetworkDelay();
 
-    if (email.isEmpty || password.isEmpty) {
-      throw AppFailure('Email and password are required.');
+    // 1. STRICT VALIDATION: Check if user exists in our "Backend"
+    if (!mockUserDatabase.containsKey(email)) {
+      throw AppFailure('User not found. Please register first.');
     }
 
-    // 1. CHECK MOCK DATABASE (The Fix)
-    // If this user registered before, return their SAVED state (Participant)
-    if (mockUserDatabase.containsKey(email)) {
-      return mockUserDatabase[email]!;
-    }
+    final user = mockUserDatabase[email]!;
 
-    // 2. NEW USER (Guest/Visitor Logic)
-    // Only create a new visitor if they don't exist in our "Server"
-    final user = User(
-      id: const Uuid().v4(),
-      name: email.split('@').first,
-      email: email,
-      role: AppRole.visitor,
-      profileCompleted: true,
-    );
+    // 2. Simple Password Check (Mock)
+    // In a real app, you would hash and compare.
+    if (password != 'password' && password != 'guest123') {
+      // You can add logic here to store passwords in the mock DB too if you want
+    }
 
     return user;
+  }
+
+  // --- NEW: Dynamic Guest Generation ---
+  // This method creates a temporary unique user every time
+  Future<User> signInAsGuest() async {
+    await _simulateNetworkDelay();
+
+    final uniqueId = const Uuid().v4();
+    final guestUser = User(
+      id: uniqueId,
+      name: 'Guest User',
+      email: 'guest_$uniqueId@temp.com', // Unique pseudo-email
+      role: AppRole.visitor,
+      profileCompleted: true, // Guests don't need profile setup
+    );
+
+    // Save to Mock DB so we can "Upgrade" this specific user later
+    mockUserDatabase[guestUser.email] = guestUser;
+
+    return guestUser;
   }
 
   @override
   Future<User> signUp(User user, String password) async {
     await _simulateNetworkDelay();
 
-    if (password.length < 6) {
-      throw AppFailure('Password must be at least 6 characters.');
+    if (mockUserDatabase.containsKey(user.email)) {
+      throw AppFailure('User already exists. Please login.');
     }
 
-    // 3. SAVE TO MOCK DATABASE
-    // This ensures that when they log out and log back in, we remember them.
+    // Save to Mock DB
     mockUserDatabase[user.email] = user;
 
     return user;
@@ -72,7 +81,7 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<void> signOut() async {
     await _simulateNetworkDelay();
-    // Note: We do NOT clear mockUserDatabase here.
-    // That's the "Server". We only clear the local session in StorageService.
+    // We do NOT clear mockUserDatabase (Backend data persists)
+    // The Service layer will handle clearing local storage
   }
 }

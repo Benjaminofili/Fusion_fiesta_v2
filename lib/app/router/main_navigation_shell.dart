@@ -5,7 +5,8 @@ import '../../app/di/service_locator.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_roles.dart';
 import '../../core/services/auth_service.dart';
-import '../../data/models/user.dart'; // Import User model
+import '../../core/services/storage_service.dart'; // <--- 1. Import This
+import '../../data/models/user.dart';
 
 // Screens
 import '../../features/admin/dashboard/presentation/screens/admin_dashboard_screen.dart';
@@ -24,12 +25,14 @@ class MainNavigationShell extends StatefulWidget {
 
 class _MainNavigationShellState extends State<MainNavigationShell> {
   final AuthService _authService = serviceLocator<AuthService>();
+  // 2. Access StorageService directly for synchronous data
+  final StorageService _storageService = serviceLocator<StorageService>();
+
   int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    // We don't need _loadUserRole anymore, StreamBuilder handles it
   }
 
   void _onItemTapped(int index) {
@@ -38,31 +41,26 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
 
   @override
   Widget build(BuildContext context) {
-    // --- THE FIX: Listen to the User Stream ---
+    // 3. Get the user explicitly before building the StreamBuilder
+    // This grabs the user from disk immediately, no waiting.
+    final initialUser = _storageService.getUser();
+
     return StreamBuilder<User?>(
       stream: _authService.userStream,
-      // Initial data tries to fetch from cache synchronously if possible
-      initialData: null,
+      initialData: initialUser, // <--- 4. USE IT HERE (The Fix)
       builder: (context, snapshot) {
-        // 1. If we are waiting for the stream, try to fetch async (Bootstrap)
-        if (!snapshot.hasData && snapshot.connectionState == ConnectionState.waiting) {
-          _authService.currentUser.then((user) {
-            // This ensures the stream gets populated if it was empty
-          });
-          // While fetching, show loading or fallback
-          // However, for smoother UX, we can default to Visitor until data arrives
-        }
 
-        // 2. Determine Role
+        // Safety: If snapshot has no data yet, rely on our initial sync fetch
         final user = snapshot.data;
-        // If user is null (loading) or not logged in, default to Visitor
+
+        // 5. Determine Role (Defaults to Visitor only if TRULY null)
         final role = user?.role ?? AppRole.visitor;
 
-        // 3. Get Tabs & Pages for this Role
+        // 6. Get Tabs & Pages (Existing Logic)
         final tabs = _getTabsForRole(role);
         final pages = _getPagesForRole(role);
 
-        // Safety: If role changed and index is out of bounds, reset
+        // Safety: Reset index if switching roles changes tab count
         if (_selectedIndex >= tabs.length) {
           _selectedIndex = 0;
         }
@@ -102,6 +100,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
     );
   }
 
+  // ... (Keep existing _getTabsForRole and _getPagesForRole methods exactly the same)
   List<_NavTab> _getTabsForRole(AppRole role) {
     switch (role) {
       case AppRole.admin:
@@ -120,7 +119,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         ];
       case AppRole.student:
         return const [
-          _NavTab(icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Home'), // Dashboard
+          _NavTab(icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Home'),
           _NavTab(icon: Icons.calendar_month_outlined, activeIcon: Icons.calendar_month, label: 'Events'),
           _NavTab(icon: Icons.photo_library_outlined, activeIcon: Icons.photo_library, label: 'Gallery'),
           _NavTab(icon: Icons.person_outline, activeIcon: Icons.person, label: 'Profile'),
@@ -128,7 +127,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
       case AppRole.visitor:
       default:
         return const [
-          _NavTab(icon: Icons.calendar_month_outlined, activeIcon: Icons.calendar_month, label: 'Events'), // Catalog
+          _NavTab(icon: Icons.calendar_month_outlined, activeIcon: Icons.calendar_month, label: 'Events'),
           _NavTab(icon: Icons.photo_library_outlined, activeIcon: Icons.photo_library, label: 'Gallery'),
           _NavTab(icon: Icons.person_outline, activeIcon: Icons.person, label: 'Profile'),
         ];
