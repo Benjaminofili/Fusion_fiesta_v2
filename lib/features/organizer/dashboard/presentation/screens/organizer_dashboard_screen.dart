@@ -134,7 +134,11 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
                       label: 'Scan QR',
                       onTap: () {
                         // We will build this screen later
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('QR Scanner coming soon')));
+                        if (myEvents.isNotEmpty) {
+                          context.push('${AppRoutes.events}/attendance', extra: myEvents.first);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No events to scan')));
+                        }
                       },
                     ),
                     SizedBox(width: 12.w),
@@ -189,12 +193,30 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
                             '${event.registeredCount} Registered • ${event.location}',
                             style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
                           ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.edit_outlined),
-                            onPressed: () {
-                              // NEW: Navigate to Edit
-                              context.push('${AppRoutes.events}/edit', extra: event);
-                            },
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Edit Button
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined),
+                                onPressed: () => context.push('${AppRoutes.events}/edit', extra: event),
+                              ),
+                              // NEW: Participants Button
+                              IconButton(
+                                icon: const Icon(Icons.people_outline, color: AppColors.primary),
+                                tooltip: 'Manage Participants',
+                                onPressed: () {
+                                  context.push('${AppRoutes.events}/participants', extra: event);
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.campaign, color: Colors.orange),
+                                tooltip: 'Send Announcement',
+                                onPressed: () {
+                                  context.push('${AppRoutes.events}/announce', extra: event);
+                                },
+                              ),
+                            ],
                           ),
                         ),
                       );

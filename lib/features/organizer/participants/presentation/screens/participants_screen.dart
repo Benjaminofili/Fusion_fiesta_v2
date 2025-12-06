@@ -1,28 +1,189 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
-class ParticipantsScreen extends StatelessWidget {
-  const ParticipantsScreen({super.key});
+import '../../../../../app/di/service_locator.dart';
+import '../../../../../core/constants/app_colors.dart';
+import '../../../../../data/models/event.dart';
+import '../../../../../data/models/registration.dart';
+import '../../../../../data/repositories/event_repository.dart';
+
+class ParticipantsScreen extends StatefulWidget {
+  final Event event;
+
+  const ParticipantsScreen({super.key, required this.event});
+
+  @override
+  State<ParticipantsScreen> createState() => _ParticipantsScreenState();
+}
+
+class _ParticipantsScreenState extends State<ParticipantsScreen> {
+  final _repository = serviceLocator<EventRepository>();
+
+  Future<void> _updateStatus(Registration reg, String status) async {
+    try {
+      await _repository.updateRegistrationStatus(reg.id, status);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Participant marked as $status')),
+        );
+      }
+    } catch (e) {
+      // Handle error
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Participants')),
-      body: ListView.builder(
-        itemCount: 8,
-        itemBuilder: (context, index) => ListTile(
-          leading: CircleAvatar(child: Text('${index + 1}')),
-          title: Text('Participant ${index + 1}'),
-          subtitle: const Text('Status: Pending'),
-          trailing: Wrap(
-            spacing: 8,
-            children: const [
-              Icon(Icons.check_circle_outline),
-              Icon(Icons.cancel_outlined),
-            ],
-          ),
+      backgroundColor: const Color(0xFFF9FAFB),
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Participants', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            Text(widget.event.title, style: TextStyle(color: Colors.grey, fontSize: 12.sp)),
+          ],
         ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: const BackButton(color: Colors.black),
+      ),
+      body: StreamBuilder<List<Registration>>(
+        stream: _repository.getEventRegistrationsStream(widget.event.id),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final registrations = snapshot.data!;
+
+          if (registrations.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.people_outline, size: 60.sp, color: Colors.grey[300]),
+                  SizedBox(height: 16.h),
+                  Text('No registrations yet', style: TextStyle(color: Colors.grey[500])),
+                ],
+              ),
+            );
+          }
+
+          return ListView.separated(
+            padding: EdgeInsets.all(16.w),
+            itemCount: registrations.length,
+            separatorBuilder: (_, __) => SizedBox(height: 12.h),
+            itemBuilder: (context, index) {
+              final reg = registrations[index];
+              return _ParticipantTile(
+                registration: reg,
+                onApprove: () => _updateStatus(reg, 'approved'),
+                onReject: () => _updateStatus(reg, 'rejected'),
+              );
+            },
+          );
+        },
       ),
     );
   }
 }
 
+class _ParticipantTile extends StatelessWidget {
+  final Registration registration;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+
+  const _ParticipantTile({
+    required this.registration,
+    required this.onApprove,
+    required this.onReject,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // In a real app, you would fetch User details using registration.userId
+    // For mock, we'll display the User ID or a placeholder name
+    final isPending = registration.status == 'pending';
+    final isApproved = registration.status == 'approved';
+    final isRejected = registration.status == 'rejected';
+
+    Color statusColor = Colors.grey;
+    IconData statusIcon = Icons.access_time;
+
+    if (isApproved) {
+      statusColor = AppColors.success;
+      statusIcon = Icons.check_circle;
+    } else if (isRejected) {
+      statusColor = AppColors.error;
+      statusIcon = Icons.cancel;
+    }
+
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: AppColors.primary.withOpacity(0.1),
+            child: const Icon(Icons.person, color: AppColors.primary),
+          ),
+          SizedBox(width: 16.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Student ID: ${registration.userId}',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp),
+                ),
+                Text(
+                  DateFormat('MMM d, h:mm a').format(registration.createdAt),
+                  style: TextStyle(color: Colors.grey, fontSize: 12.sp),
+                ),
+              ],
+            ),
+          ),
+          if (isPending) ...[
+            IconButton(
+              icon: const Icon(Icons.check, color: AppColors.success),
+              onPressed: onApprove,
+              tooltip: 'Approve',
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, color: AppColors.error),
+              onPressed: onReject,
+              tooltip: 'Reject',
+            ),
+          ] else ...[
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              child: Row(
+                children: [
+                  Icon(statusIcon, size: 14.sp, color: statusColor),
+                  SizedBox(width: 4.w),
+                  Text(
+                    registration.status.toUpperCase(),
+                    style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 10.sp),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}

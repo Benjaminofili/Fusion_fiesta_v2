@@ -41,6 +41,9 @@ import '../../data/models/gallery_item.dart';
 
 // --- Organizer Screens ---
 import '../../features/organizer/event_editor/presentation/screens/event_editor_screen.dart';
+import '../../features/organizer/participants/presentation/screens/participants_screen.dart';
+import '../../features/organizer/attendance/presentation/screens/attendance_screen.dart';
+import '../../features/organizer/announcements/presentation/screens/event_announcements_screen.dart';
 
 import 'main_navigation_shell.dart';
 
@@ -151,6 +154,32 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.favorites,
         builder: (context, state) => const FavoritesScreen(),
+      ),
+
+      // --- ORGANIZER FEATURES (PROTECTED) ---
+      GoRoute(
+        path: 'participants', // /events/participants
+        builder: (context, state) {
+          final event = state.extra as Event;
+          return ParticipantsScreen(event: event);
+        },
+      ),
+      // Attendance Route
+      GoRoute(
+        path: 'attendance',
+        builder: (context, state) {
+          final event = state.extra as Event;
+          return AttendanceScreen(event: event);
+        },
+      ),
+
+      // Announcements Route
+      GoRoute(
+        path: 'announce',
+        builder: (context, state) {
+          final event = state.extra as Event;
+          return EventAnnouncementsScreen(event: event);
+        },
       ),
 
       // --- COMMON FEATURES ---

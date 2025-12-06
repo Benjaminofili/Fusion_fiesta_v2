@@ -1,4 +1,5 @@
 import '../models/event.dart';
+import '../models/registration.dart';
 
 abstract class EventRepository {
   // Real-time stream of events
@@ -23,4 +24,9 @@ abstract class EventRepository {
   Future<void> createEvent(Event event);
   Future<void> updateEvent(Event event);
   Future<void> deleteEvent(String eventId);
+  Stream<List<Registration>> getEventRegistrationsStream(String eventId);
+  Future<void> updateRegistrationStatus(String registrationId, String newStatus);
+  Future<void> markAttendance(String eventId, String userId);
+  Future<void> broadcastAnnouncement(String eventId, String title, String message);
+
 }
