@@ -36,7 +36,9 @@ import '../../features/student/feedback/presentation/screens/feedback_form_scree
 import '../../features/student/favorites/presentation/screens/favorites_screen.dart';
 import '../../features/student/saved_media/presentation/screens/saved_media_screen.dart';
 import '../../features/common/gallery/presentation/screens/gallery_image_viewer.dart';
+import '../../features/student/payment/presentation/screens/mock_payment_screen.dart';
 import '../../data/models/gallery_item.dart';
+
 
 
 import 'main_navigation_shell.dart';
@@ -115,6 +117,19 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.certificates,
         builder: (context, state) => const CertificatesScreen(),
+        // Add Sub-route for payment
+        routes: [
+          GoRoute(
+            path: 'pay',
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>;
+              return MockPaymentScreen(
+                amount: extra['amount'] as double,
+                itemName: extra['itemName'] as String,
+              );
+            },
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoutes.feedback,

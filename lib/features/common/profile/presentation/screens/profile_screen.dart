@@ -8,6 +8,7 @@ import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_roles.dart';
 import '../../../../../core/constants/app_routes.dart';
 import '../../../../../core/services/auth_service.dart';
+import '../../../../../core/services/notification_service.dart';
 import '../../../../../core/services/storage_service.dart';
 import '../../../../../data/models/user.dart';
 
@@ -343,6 +344,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SnackBar(content: Text('App Reset. Restarting...')),
                   );
                   context.go(AppRoutes.splash);
+                }
+              },
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              tileColor: Colors.blue[50],
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              leading: const Icon(Icons.notifications_active, color: AppColors.primary),
+              title: const Text('Simulate Server Alert'),
+              subtitle: const Text('Triggers a "Push" Notification'),
+              onTap: () async {
+                final notifService = serviceLocator<NotificationService>();
+
+                // Trigger a realistic scenario
+                await notifService.showNotification(
+                    title: '🎓 Certificate Available!',
+                    body: 'Your certificate for "TechViz 2025" is now ready to download.'
+                );
+
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Notification Sent! Check your status bar.')),
+                  );
                 }
               },
             ),

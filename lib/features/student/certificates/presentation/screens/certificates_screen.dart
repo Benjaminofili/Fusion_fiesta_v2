@@ -3,13 +3,14 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart'; // For date formatting
+import 'package:intl/intl.dart';
 
 import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
-import '../../../../../data/models/certificate.dart'; // Central Model
-import '../../../../../data/models/event.dart'; // Central Model
-import '../../../../../data/repositories/event_repository.dart'; // To look up event details
+import '../../../../../core/constants/app_routes.dart'; // Import Routes
+import '../../../../../data/models/certificate.dart';
+import '../../../../../data/models/event.dart';
+import '../../../../../data/repositories/event_repository.dart';
 
 class CertificatesScreen extends StatefulWidget {
   const CertificatesScreen({super.key});
@@ -23,7 +24,7 @@ class _CertificatesScreenState extends State<CertificatesScreen> {
 
   bool _isLoading = true;
   List<Certificate> _certificates = [];
-  Map<String, Event> _relatedEvents = {}; // Cache event details here
+  Map<String, Event> _relatedEvents = {};
 
   @override
   void initState() {
@@ -32,39 +33,30 @@ class _CertificatesScreenState extends State<CertificatesScreen> {
   }
 
   Future<void> _loadData() async {
-    // Simulate network delay
     await Future.delayed(const Duration(milliseconds: 800));
 
     try {
-      // 1. Fetch All Events (In a real app, you might fetch specific events by ID)
       final events = await _eventRepository.getEventsStream().first;
-
-      // Create a lookup map for easy access: EventID -> Event
       final eventMap = {for (var e in events) e.id: e};
 
-      // 2. Mock Certificates (using your Central Model)
-      // We use IDs that match your MockEventRepository (event-0, event-1)
+      // Mock Data with Payment Logic
       final certs = [
         Certificate(
           id: 'cert-001',
           userId: 'user-123',
-          eventId: 'event-0', // Matches Technical Event in MockRepo
+          eventId: 'event-0',
           url: 'https://example.com/cert1.pdf',
           issuedAt: DateTime.now().subtract(const Duration(days: 12)),
+          isPaid: true, // Free/Already Paid
         ),
         Certificate(
           id: 'cert-002',
           userId: 'user-123',
-          eventId: 'event-1', // Matches Cultural Event in MockRepo
+          eventId: 'event-1',
           url: 'https://example.com/cert2.pdf',
           issuedAt: DateTime.now().subtract(const Duration(days: 45)),
-        ),
-        Certificate(
-          id: 'cert-003',
-          userId: 'user-123',
-          eventId: 'event-2', // Matches another event
-          url: 'https://example.com/cert3.pdf',
-          issuedAt: DateTime.now().subtract(const Duration(days: 120)),
+          fee: 5.00,
+          isPaid: false, // REQUIRES PAYMENT
         ),
       ];
 
@@ -77,6 +69,36 @@ class _CertificatesScreenState extends State<CertificatesScreen> {
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleAction(Certificate cert) async {
+    if (cert.isPaid) {
+      // Logic for Download
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Downloading ${cert.id}.pdf...'), backgroundColor: AppColors.success),
+      );
+    } else {
+      // Logic for Payment
+      final success = await context.push<bool>(
+          '${AppRoutes.certificates}/pay',
+          extra: {'amount': cert.fee, 'itemName': 'Certificate Fee: ${cert.id}'}
+      );
+
+      if (success == true) {
+        // Update local state to show as paid
+        setState(() {
+          final index = _certificates.indexWhere((c) => c.id == cert.id);
+          if (index != -1) {
+            _certificates[index] = cert.copyWith(isPaid: true);
+          }
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Payment Successful! Certificate Unlocked.')),
+          );
+        }
+      }
     }
   }
 
@@ -136,7 +158,7 @@ class _CertificatesScreenState extends State<CertificatesScreen> {
             certificate: cert,
             eventTitle: event?.title ?? 'Unknown Event',
             eventCategory: event?.category ?? 'General',
-            onDownload: () => _downloadCertificate(cert),
+            onAction: () => _handleAction(cert),
           ).animate().fadeIn(delay: (100 * index).ms).slideX(begin: 0.1);
         },
       ),
@@ -166,18 +188,22 @@ class _CertificateCard extends StatelessWidget {
   final Certificate certificate;
   final String eventTitle;
   final String eventCategory;
-  final VoidCallback onDownload;
+  final VoidCallback onAction;
 
   const _CertificateCard({
     required this.certificate,
     required this.eventTitle,
     required this.eventCategory,
-    required this.onDownload,
+    required this.onAction,
   });
 
   @override
   Widget build(BuildContext context) {
-    final dateFormatted = DateFormat('MMM d, yyyy').format(certificate.issuedAt);
+    // Determine status
+    final isLocked = !certificate.isPaid;
+    final actionLabel = isLocked ? 'Pay \$${certificate.fee}' : 'Download';
+    final actionIcon = isLocked ? Icons.lock_outline : Icons.download_rounded;
+    final actionColor = isLocked ? Colors.orange : AppColors.primary;
 
     return Container(
       margin: EdgeInsets.only(bottom: 16.h),
@@ -185,111 +211,53 @@ class _CertificateCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
       ),
       child: Row(
         children: [
-          // Icon / Thumbnail
+          // Icon with Lock/Unlock status
           Container(
             width: 60.w,
             height: 60.w,
             decoration: BoxDecoration(
-              color: _getCategoryColor(eventCategory).withOpacity(0.1),
+              color: isLocked ? Colors.grey[100] : Colors.blue.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12.r),
             ),
             child: Center(
               child: Icon(
-                FontAwesomeIcons.filePdf,
-                color: _getCategoryColor(eventCategory),
-                size: 28.sp,
+                isLocked ? Icons.lock : FontAwesomeIcons.filePdf,
+                color: isLocked ? Colors.grey : Colors.blue,
+                size: 24.sp,
               ),
             ),
           ),
           SizedBox(width: 16.w),
 
-          // Details
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  eventTitle,
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  'Issued: $dateFormatted',
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                SizedBox(height: 8.h),
-
-                // Actions Row
-                Row(
-                  children: [
-                    // View Button
-                    InkWell(
-                      onTap: () {
-                        // TODO: Open PDF Viewer
-                      },
-                      child: Text(
-                        'View',
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13.sp,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 16.w),
-                    // Download Button
-                    InkWell(
-                      onTap: onDownload,
-                      child: Row(
-                        children: [
-                          Icon(Icons.download_rounded, size: 16.sp, color: AppColors.textSecondary),
-                          SizedBox(width: 4.w),
-                          Text(
-                            'Download',
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 13.sp,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                )
+                Text(eventTitle, style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                if (isLocked)
+                  Text('Payment Pending', style: TextStyle(fontSize: 12.sp, color: Colors.orange))
+                else
+                  Text('Issued: ${DateFormat('MMM d, yyyy').format(certificate.issuedAt)}', style: TextStyle(fontSize: 12.sp, color: Colors.grey)),
               ],
+            ),
+          ),
+
+          // Action Button
+          TextButton.icon(
+            onPressed: onAction,
+            icon: Icon(actionIcon, size: 16, color: actionColor),
+            label: Text(actionLabel, style: TextStyle(color: actionColor, fontWeight: FontWeight.bold)),
+            style: TextButton.styleFrom(
+              backgroundColor: actionColor.withOpacity(0.1),
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
             ),
           ),
         ],
       ),
     );
-  }
-
-  Color _getCategoryColor(String category) {
-    switch (category.toLowerCase()) {
-      case 'technical': return Colors.blue;
-      case 'cultural': return Colors.deepPurple;
-      case 'sports': return Colors.orange;
-      default: return AppColors.primary;
-    }
   }
 }
