@@ -3,7 +3,7 @@ import '../models/user.dart';
 import '../repositories/user_repository.dart';
 
 // Import the mock database we just created
-import 'auth_repository_impl.dart';
+import '../../mock/mock_data.dart';
 
 class UserRepositoryImpl implements UserRepository {
 

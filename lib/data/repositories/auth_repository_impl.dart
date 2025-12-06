@@ -4,14 +4,7 @@ import '../../core/errors/app_failure.dart';
 import '../../core/services/storage_service.dart';
 import '../models/user.dart';
 import '../repositories/auth_repository.dart';
-
-// --- PERSISTENT MOCK DATABASE ---
-final Map<String, User> mockUserDatabase = {};
-// NEW: Store passwords separately
-final Map<String, String> mockPasswords = {
-  'student@fusionfiesta.dev': 'password', // Default
-  'organizer@fusionfiesta.dev': 'password',
-};
+import '../../mock/mock_data.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final StorageService _storageService;

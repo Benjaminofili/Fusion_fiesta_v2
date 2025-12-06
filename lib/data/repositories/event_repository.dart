@@ -1,5 +1,4 @@
 import '../models/event.dart';
-import '../models/gallery_item.dart';
 
 abstract class EventRepository {
   // Real-time stream of events
@@ -19,4 +18,9 @@ abstract class EventRepository {
   Future<void> registerForEvent(String eventId, String userId);
   Future<void> cancelRegistration(String eventId, String userId);
   Future<void> toggleFavorite(String eventId, String userId); // Added this
+
+  // --- NEW: ORGANIZER ACTIONS ---
+  Future<void> createEvent(Event event);
+  Future<void> updateEvent(Event event);
+  Future<void> deleteEvent(String eventId);
 }

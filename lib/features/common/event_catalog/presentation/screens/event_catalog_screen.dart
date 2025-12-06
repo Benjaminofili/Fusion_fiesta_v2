@@ -31,6 +31,9 @@ class _EventCatalogScreenState extends State<EventCatalogScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Check if we can go back (meaning we were PUSHED here, not on the main tab)
+    final canGoBack = context.canPop();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       body: SafeArea(
@@ -41,10 +44,28 @@ class _EventCatalogScreenState extends State<EventCatalogScreen> {
               padding: const EdgeInsets.all(AppSizes.lg),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
-                  // FIXED ALIGNMENT HERE
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.start, // <--- Keeps History button at top
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // --- NEW: CONDITIONAL BACK BUTTON ---
+                      if (canGoBack) ...[
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4.0, right: 12.0),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                              onPressed: () => context.pop(),
+                            ),
+                          ),
+                        ),
+                      ],
+                      // ------------------------------------
+
                       // Search Bar
                       Expanded(
                         child: GlobalSearchBar(
@@ -64,9 +85,9 @@ class _EventCatalogScreenState extends State<EventCatalogScreen> {
 
                       const SizedBox(width: 12),
 
-                      // History Button (Now aligned to top)
+                      // History Button
                       Padding(
-                        padding: const EdgeInsets.only(top: 4.0), // Minor tweak to match input height
+                        padding: const EdgeInsets.only(top: 4.0),
                         child: Container(
                           decoration: BoxDecoration(
                             color: _showPastEvents ? AppColors.primary : Colors.white,

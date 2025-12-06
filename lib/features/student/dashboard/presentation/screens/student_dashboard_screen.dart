@@ -340,7 +340,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 ),
               ),
               TextButton(
-                onPressed: () => context.go(AppRoutes.events),
+                onPressed: () => context.push(AppRoutes.events),
                 child: Text('See All', style: TextStyle(fontSize: 14.sp)),
               ),
             ],

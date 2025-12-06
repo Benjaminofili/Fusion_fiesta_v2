@@ -39,7 +39,8 @@ import '../../features/common/gallery/presentation/screens/gallery_image_viewer.
 import '../../features/student/payment/presentation/screens/mock_payment_screen.dart';
 import '../../data/models/gallery_item.dart';
 
-
+// --- Organizer Screens ---
+import '../../features/organizer/event_editor/presentation/screens/event_editor_screen.dart';
 
 import 'main_navigation_shell.dart';
 
@@ -104,6 +105,18 @@ class AppRouter {
             builder: (context, state) {
               final event = state.extra as Event;
               return EventDetailScreen(event: event);
+            },
+          ),
+          // --- NEW: ORGANIZER ROUTES ---
+          GoRoute(
+            path: 'create', // matches /events/create
+            builder: (context, state) => const EventEditorScreen(),
+          ),
+          GoRoute(
+            path: 'edit', // matches /events/edit
+            builder: (context, state) {
+              final event = state.extra as Event;
+              return EventEditorScreen(event: event);
             },
           ),
         ],
