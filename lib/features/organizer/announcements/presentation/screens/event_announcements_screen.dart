@@ -22,7 +22,10 @@ class _EventAnnouncementsScreenState extends State<EventAnnouncementsScreen> {
   bool _isLoading = false;
 
   Future<void> _sendAnnouncement() async {
-    if (_titleController.text.isEmpty || _messageController.text.isEmpty) return;
+    if (_titleController.text.isEmpty || _messageController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -47,51 +50,68 @@ class _EventAnnouncementsScreenState extends State<EventAnnouncementsScreen> {
       appBar: AppBar(
         title: const Text('New Announcement'),
       ),
-      body: Padding(
+      // 1. Wrap in SingleChildScrollView to fix overflow
+      body: SingleChildScrollView(
         padding: EdgeInsets.all(24.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Notify Attendees', style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold)),
-            SizedBox(height: 8.h),
-            Text(
-              'Send updates about ${widget.event.title} to all registered participants.',
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-            SizedBox(height: 32.h),
+        child: ConstrainedBox(
+          // 2. Constraints ensure full height usage but allow scrolling
+          constraints: BoxConstraints(
+            minHeight: MediaQuery.of(context).size.height - kToolbarHeight - 100, // Approximate safe height
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween, // Distribute space
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Notify Attendees', style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 8.h),
+                  Text(
+                    'Send updates about ${widget.event.title} to all registered participants.',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                  SizedBox(height: 32.h),
 
-            TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: 'Subject',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.title),
+                  TextField(
+                    controller: _titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Subject',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.title),
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
+                  TextField(
+                    controller: _messageController,
+                    maxLines: 5,
+                    decoration: const InputDecoration(
+                      labelText: 'Message',
+                      border: OutlineInputBorder(),
+                      alignLabelWithHint: true,
+                    ),
+                  ),
+                ],
               ),
-            ),
-            SizedBox(height: 16.h),
-            TextField(
-              controller: _messageController,
-              maxLines: 5,
-              decoration: const InputDecoration(
-                labelText: 'Message',
-                border: OutlineInputBorder(),
-                alignLabelWithHint: true,
+
+              // 3. Button at bottom (but scrolls if needed)
+              Padding(
+                padding: EdgeInsets.only(top: 40.h),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 56.h,
+                  child: FilledButton.icon(
+                    onPressed: _isLoading ? null : _sendAnnouncement,
+                    icon: const Icon(Icons.send),
+                    label: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text('Send Broadcast'),
+                    style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+                  ),
+                ),
               ),
-            ),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              height: 56.h,
-              child: FilledButton.icon(
-                onPressed: _isLoading ? null : _sendAnnouncement,
-                icon: const Icon(Icons.send),
-                label: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Send Broadcast'),
-                style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

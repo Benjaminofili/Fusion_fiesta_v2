@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
-
 import '../../core/utils/formatters.dart';
+
+enum EventStatus { pending, approved, rejected, cancelled }
 
 class Event extends Equatable {
   const Event({
@@ -11,11 +12,13 @@ class Event extends Equatable {
     required this.startTime,
     required this.endTime,
     required this.location,
-    required this.organizer, // <--- NEW FIELD
+    required this.organizer,
     this.bannerUrl,
     this.guidelinesUrl,
     this.registrationLimit,
     this.registeredCount = 0,
+    this.approvalStatus = EventStatus.pending, // Default to Pending
+    this.coOrganizers = const [], // Team Management
   });
 
   final String id;
@@ -25,11 +28,13 @@ class Event extends Equatable {
   final DateTime startTime;
   final DateTime endTime;
   final String location;
-  final String organizer; // <--- NEW FIELD
+  final String organizer;
   final String? bannerUrl;
   final String? guidelinesUrl;
   final int? registrationLimit;
   final int registeredCount;
+  final EventStatus approvalStatus;
+  final List<String> coOrganizers;
 
   String get scheduleLabel =>
       '${Formatters.formatDateTime(startTime)} - ${Formatters.formatDateTime(endTime)}';
@@ -41,11 +46,13 @@ class Event extends Equatable {
     DateTime? startTime,
     DateTime? endTime,
     String? location,
-    String? organizer, // <--- NEW
+    String? organizer,
     String? bannerUrl,
     String? guidelinesUrl,
     int? registrationLimit,
     int? registeredCount,
+    EventStatus? approvalStatus,
+    List<String>? coOrganizers,
   }) {
     return Event(
       id: id,
@@ -55,11 +62,13 @@ class Event extends Equatable {
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       location: location ?? this.location,
-      organizer: organizer ?? this.organizer, // <--- NEW
+      organizer: organizer ?? this.organizer,
       bannerUrl: bannerUrl ?? this.bannerUrl,
       guidelinesUrl: guidelinesUrl ?? this.guidelinesUrl,
       registrationLimit: registrationLimit ?? this.registrationLimit,
       registeredCount: registeredCount ?? this.registeredCount,
+      approvalStatus: approvalStatus ?? this.approvalStatus,
+      coOrganizers: coOrganizers ?? this.coOrganizers,
     );
   }
 
@@ -72,10 +81,12 @@ class Event extends Equatable {
     startTime,
     endTime,
     location,
-    organizer, // <--- NEW
+    organizer,
     bannerUrl,
     guidelinesUrl,
     registrationLimit,
     registeredCount,
+    approvalStatus,
+    coOrganizers,
   ];
 }

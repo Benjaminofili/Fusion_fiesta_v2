@@ -7,13 +7,13 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/services/auth_service.dart';
-import '../../../../../core/widgets/app_text_field.dart'; // Reuse your widget!
+import '../../../../../core/widgets/app_text_field.dart';
 import '../../../../../core/widgets/upload_picker.dart';
 import '../../../../../data/models/event.dart';
 import '../../../../../data/repositories/event_repository.dart';
 
 class EventEditorScreen extends StatefulWidget {
-  final Event? event; // If null, we are Creating. If provided, we are Editing.
+  final Event? event;
 
   const EventEditorScreen({super.key, this.event});
 
@@ -31,6 +31,7 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
   late TextEditingController _descCtrl;
   late TextEditingController _locationCtrl;
   late TextEditingController _limitCtrl;
+  final _volunteerCtrl = TextEditingController();
 
   // State
   bool _isLoading = false;
@@ -39,6 +40,7 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
   String _selectedCategory = 'Technical';
   String? _bannerPath;
   String? _pdfPath;
+  List<String> _coOrganizers = []; // Team List
 
   @override
   void initState() {
@@ -55,7 +57,24 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
       _selectedCategory = e.category;
       _bannerPath = e.bannerUrl;
       _pdfPath = e.guidelinesUrl;
+      _coOrganizers = List.from(e.coOrganizers);
     }
+  }
+
+  void _addVolunteer() {
+    final name = _volunteerCtrl.text.trim();
+    if (name.isNotEmpty && !_coOrganizers.contains(name)) {
+      setState(() {
+        _coOrganizers.add(name);
+        _volunteerCtrl.clear();
+      });
+    }
+  }
+
+  void _removeVolunteer(String name) {
+    setState(() {
+      _coOrganizers.remove(name);
+    });
   }
 
   Future<void> _saveEvent() async {
@@ -69,10 +88,10 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
 
     try {
       final user = await _authService.currentUser;
-      final organizerName = user?.name ?? 'Organizer'; // In real app, use ID
+      final organizerName = user?.name ?? 'Organizer';
 
       final newEvent = Event(
-        id: widget.event?.id ?? const Uuid().v4(), // Generate ID if new
+        id: widget.event?.id ?? const Uuid().v4(),
         title: _titleCtrl.text.trim(),
         description: _descCtrl.text.trim(),
         category: _selectedCategory,
@@ -83,7 +102,10 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
         registrationLimit: int.tryParse(_limitCtrl.text),
         bannerUrl: _bannerPath,
         guidelinesUrl: _pdfPath,
-        registeredCount: widget.event?.registeredCount ?? 0, // Preserve count if editing
+        registeredCount: widget.event?.registeredCount ?? 0,
+        // New Fields
+        coOrganizers: _coOrganizers,
+        approvalStatus: widget.event?.approvalStatus ?? EventStatus.pending, // Reset to pending if needed, or keep existing
       );
 
       if (widget.event == null) {
@@ -93,7 +115,7 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Event Saved Successfully!')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Event Saved! Waiting for Approval.')));
         context.pop();
       }
     } catch (e) {
@@ -123,7 +145,6 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
     setState(() {
       if (isStart) {
         _startDate = dateTime;
-        // Auto-set end date to 2 hours later if not set
         if (_endDate == null) _endDate = dateTime.add(const Duration(hours: 2));
       } else {
         _endDate = dateTime;
@@ -189,7 +210,7 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
               // 3. LOCATION & LIMITS
               AppTextField(controller: _locationCtrl, label: 'Venue / Location', prefixIcon: Icons.location_on_outlined, validator: (v) => v!.isEmpty ? 'Required' : null),
               SizedBox(height: 16.h),
-              AppTextField(controller: _limitCtrl, label: 'Max Participants (Optional)', prefixIcon: Icons.people_outline, keyboardType: TextInputType.number),
+              AppTextField(controller: _limitCtrl, label: 'Max Participants', prefixIcon: Icons.people_outline, keyboardType: TextInputType.number),
               SizedBox(height: 16.h),
 
               // 4. DESCRIPTION
@@ -205,7 +226,39 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
               ),
               SizedBox(height: 24.h),
 
-              // 5. UPLOADS
+              // 5. TEAM MANAGEMENT (New Feature)
+              Text('Team Management', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp)),
+              SizedBox(height: 8.h),
+              Row(
+                children: [
+                  Expanded(
+                    child: AppTextField(
+                        controller: _volunteerCtrl,
+                        label: 'Add Co-organizer / Volunteer',
+                        prefixIcon: Icons.person_add_alt
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
+                  IconButton.filled(
+                    onPressed: _addVolunteer,
+                    icon: const Icon(Icons.add),
+                    style: IconButton.styleFrom(backgroundColor: AppColors.primary),
+                  ),
+                ],
+              ),
+              SizedBox(height: 8.h),
+              Wrap(
+                spacing: 8.w,
+                children: _coOrganizers.map((name) => Chip(
+                  label: Text(name),
+                  deleteIcon: const Icon(Icons.close, size: 18),
+                  onDeleted: () => _removeVolunteer(name),
+                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                )).toList(),
+              ),
+              SizedBox(height: 24.h),
+
+              // 6. UPLOADS
               Text('Attachments', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp)),
               SizedBox(height: 12.h),
               UploadPicker(
@@ -229,7 +282,7 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
 
               SizedBox(height: 40.h),
 
-              // 6. SUBMIT BUTTON
+              // 7. SUBMIT
               SizedBox(
                 width: double.infinity,
                 height: 56.h,
@@ -241,7 +294,7 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
                   ),
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : Text(isEditing ? 'Update Event' : 'Publish Event', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                      : Text(isEditing ? 'Update Event' : 'Submit for Approval', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

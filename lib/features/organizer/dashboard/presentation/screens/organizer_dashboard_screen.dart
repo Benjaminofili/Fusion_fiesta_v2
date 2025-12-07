@@ -10,7 +10,6 @@ import '../../../../../core/services/auth_service.dart';
 import '../../../../../data/models/event.dart';
 import '../../../../../data/models/user.dart';
 import '../../../../../data/repositories/event_repository.dart';
-import '../../../../../core/widgets/stat_tile.dart'; // Ensure you have this widget or use the inline one below
 
 class OrganizerDashboardScreen extends StatefulWidget {
   const OrganizerDashboardScreen({super.key});
@@ -36,6 +35,39 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
     if (mounted) setState(() => _currentUser = user);
   }
 
+  // --- NEW: Status Logic ---
+  String _getEventStatus(Event event) {
+    // 1. Check Approval First
+    if (event.approvalStatus == EventStatus.pending) {
+      return 'PENDING';
+    } else if (event.approvalStatus == EventStatus.rejected) {
+      return 'REJECTED';
+    } else if (event.approvalStatus == EventStatus.cancelled) {
+      return 'CANCELLED';
+    }
+
+    // 2. If Approved, check Time
+    final now = DateTime.now();
+    if (now.isAfter(event.startTime) && now.isBefore(event.endTime)) {
+      return 'LIVE';
+    } else if (now.isAfter(event.endTime)) {
+      return 'COMPLETED';
+    } else {
+      return 'UPCOMING';
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'PENDING': return Colors.orange;
+      case 'REJECTED': return Colors.red;
+      case 'CANCELLED': return Colors.red;
+      case 'LIVE': return Colors.green;
+      case 'COMPLETED': return Colors.grey;
+      default: return AppColors.primary; // Upcoming
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_currentUser == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -49,7 +81,12 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
           children: [
             CircleAvatar(
               backgroundColor: AppColors.primary.withOpacity(0.1),
-              child: const Icon(Icons.person, color: AppColors.primary),
+              backgroundImage: _currentUser?.profilePictureUrl != null
+                  ? NetworkImage(_currentUser!.profilePictureUrl!)
+                  : null,
+              child: _currentUser?.profilePictureUrl == null
+                  ? const Icon(Icons.person, color: AppColors.primary)
+                  : null,
             ),
             SizedBox(width: 12.w),
             Column(
@@ -62,17 +99,15 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
           ],
         ),
         actions: [
+          // FIX: Working Notification Button
           IconButton(
             icon: const Icon(Icons.notifications_none, color: Colors.black),
-            onPressed: () {},
+            onPressed: () => context.push(AppRoutes.notifications),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // We will build this screen next!
-          context.push('${AppRoutes.events}/create');
-        },
+        onPressed: () => context.push('${AppRoutes.events}/create'),
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add),
         label: const Text('Create Event'),
@@ -82,14 +117,12 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-          // 1. FILTER: Get events created by THIS organizer (Mock logic: matching name or ID)
-          // In a real app, you'd filter by organizerId. For mock, we assume 'Tech Club' or current user name.
+          // Filter for THIS organizer
           final myEvents = snapshot.data!.where((e) {
-            // Flexible matching for the mock
             return e.organizer == _currentUser!.name || e.organizer == 'Tech Club';
           }).toList();
 
-          // 2. CALCULATE STATS
+          // Calculate Stats
           int totalRegistrations = 0;
           for (var e in myEvents) {
             totalRegistrations += e.registeredCount;
@@ -100,7 +133,7 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // --- STATS GRID ---
+                // --- 1. STATISTICS ---
                 Row(
                   children: [
                     Expanded(
@@ -124,34 +157,40 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
                 ),
                 SizedBox(height: 24.h),
 
-                // --- QUICK ACTIONS ---
+                // --- 2. QUICK ACTIONS (Calendar & Messages Added) ---
                 Text('Quick Actions', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
                 SizedBox(height: 12.h),
                 Row(
                   children: [
                     _ActionButton(
+                      icon: Icons.calendar_month,
+                      label: 'Calendar',
+                      onTap: () => context.push('/organizer/calendar'),
+                    ),
+                    SizedBox(width: 12.w),
+                    _ActionButton(
+                      icon: Icons.chat_bubble_outline,
+                      label: 'Queries',
+                      onTap: () => context.push('/organizer/messages'),
+                    ),
+                    SizedBox(width: 12.w),
+                    _ActionButton(
                       icon: Icons.qr_code_scanner,
                       label: 'Scan QR',
                       onTap: () {
-                        // We will build this screen later
                         if (myEvents.isNotEmpty) {
+                          // For mock, just grab the first event or show picker
                           context.push('${AppRoutes.events}/attendance', extra: myEvents.first);
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No events to scan')));
                         }
                       },
                     ),
-                    SizedBox(width: 12.w),
-                    _ActionButton(
-                      icon: Icons.photo_library_outlined,
-                      label: 'Upload Media',
-                      onTap: () => context.push('${AppRoutes.gallery}/upload'),
-                    ),
                   ],
                 ),
                 SizedBox(height: 32.h),
 
-                // --- MY EVENTS LIST ---
+                // --- 3. MY EVENTS LIST (With Status) ---
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -173,51 +212,97 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
                     itemCount: myEvents.length,
                     itemBuilder: (context, index) {
                       final event = myEvents[index];
+                      final status = _getEventStatus(event);
+                      final statusColor = _getStatusColor(status);
+
                       return Card(
                         margin: EdgeInsets.only(bottom: 12.h),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
                         color: Colors.white,
-                        child: ListTile(
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                          leading: Container(
-                            padding: EdgeInsets.all(10.w),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
+                        child: Column(
+                          children: [
+                            ListTile(
+                              contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                              leading: Container(
+                                padding: EdgeInsets.all(10.w),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(Icons.event_note, color: AppColors.primary),
+                              ),
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                      child: Text(
+                                          event.title,
+                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis
+                                      )
+                                  ),
+                                  // STATUS BADGE
+                                  Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                                    decoration: BoxDecoration(
+                                      color: statusColor.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                        status,
+                                        style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.bold, color: statusColor)
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              subtitle: Text(
+                                '${event.registeredCount} Registered • ${event.location}',
+                                style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
+                              ),
+                              trailing: PopupMenuButton<String>(
+                                onSelected: (value) {
+                                  if (value == 'announce') {
+                                    context.push('${AppRoutes.events}/announce', extra: event);
+                                  } else if (value == 'feedback') {
+                                    context.push('${AppRoutes.events}/feedback-review', extra: event);
+                                  } else if (value == 'close') {
+                                    context.push('${AppRoutes.events}/post-event', extra: event);
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'announce',
+                                    child: Row(children: [Icon(Icons.campaign, size: 18), SizedBox(width: 8), Text('Announcement')]),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'feedback',
+                                    child: Row(children: [Icon(Icons.star_half, size: 18), SizedBox(width: 8), Text('View Feedback')]),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'close',
+                                    child: Row(children: [Icon(Icons.check_circle_outline, size: 18), SizedBox(width: 8), Text('Post-Event')]),
+                                  ),
+                                ],
+                              ),
                             ),
-                            child: Icon(Icons.event_note, color: AppColors.primary),
-                          ),
-                          title: Text(event.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text(
-                            '${event.registeredCount} Registered • ${event.location}',
-                            style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Edit Button
-                              IconButton(
-                                icon: const Icon(Icons.edit_outlined),
-                                onPressed: () => context.push('${AppRoutes.events}/edit', extra: event),
-                              ),
-                              // NEW: Participants Button
-                              IconButton(
-                                icon: const Icon(Icons.people_outline, color: AppColors.primary),
-                                tooltip: 'Manage Participants',
-                                onPressed: () {
-                                  context.push('${AppRoutes.events}/participants', extra: event);
-                                },
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.campaign, color: Colors.orange),
-                                tooltip: 'Send Announcement',
-                                onPressed: () {
-                                  context.push('${AppRoutes.events}/announce', extra: event);
-                                },
-                              ),
-                            ],
-                          ),
+                            const Divider(height: 1),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                TextButton.icon(
+                                  icon: const Icon(Icons.people, size: 16),
+                                  label: const Text('Participants'),
+                                  onPressed: () => context.push('${AppRoutes.events}/participants', extra: event),
+                                ),
+                                TextButton.icon(
+                                  icon: const Icon(Icons.edit, size: 16),
+                                  label: const Text('Edit'),
+                                  onPressed: () => context.push('${AppRoutes.events}/edit', extra: event),
+                                ),
+                              ],
+                            )
+                          ],
                         ),
                       );
                     },
@@ -233,6 +318,7 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
   }
 }
 
+// --- KEEP YOUR WIDGET CLASSES (_StatCard, _ActionButton) AS THEY WERE ---
 class _StatCard extends StatelessWidget {
   final String label;
   final String value;
@@ -291,7 +377,7 @@ class _ActionButton extends StatelessWidget {
             children: [
               Icon(icon, color: AppColors.primary),
               SizedBox(height: 8.h),
-              Text(label, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.sp)),
+              Text(label, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.sp), textAlign: TextAlign.center),
             ],
           ),
         ),
