@@ -4,6 +4,9 @@ import '../data/models/event.dart';
 import '../data/models/registration.dart';
 import '../data/models/feedback_entry.dart';
 import '../data/repositories/event_repository.dart';
+import '../data/models/app_notification.dart'; // Import Notification Model
+import '../data/repositories/notification_repository.dart'; // Import Interface
+import 'mock_notification_repository.dart'; // Import Concrete Mock Class
 import '../app/di/service_locator.dart';
 import '../../core/services/notification_service.dart';
 
@@ -258,20 +261,37 @@ class MockEventRepository implements EventRepository {
 
     final event = _events.firstWhere((e) => e.id == eventId);
 
-    // 2. SAVE LOG
+    // 1. SAVE TO ORGANIZER LOG (Existing)
     _communicationLogs.insert(0, {
       'title': title,
       'event': event.title,
-      'date': DateTime.now().toString(), // formatted later
+      'date': DateTime.now().toString(),
       'msg': message,
     });
 
-    // 3. Show Notification (Existing logic)
+    // 2. TRIGGER SYSTEM POPUP (Existing)
     final notifService = serviceLocator<NotificationService>();
     await notifService.showNotification(
       title: '📢 $title',
       body: message,
     );
+
+    // --- 3. FIX: BRIDGE TO STUDENT IN-APP NOTIFICATIONS ---
+    // We get the repo from GetIt
+    final notifRepo = serviceLocator<NotificationRepository>();
+
+    // Since we know we are running in Mock mode, we cast it to access the helper method
+    if (notifRepo is MockNotificationRepository) {
+      notifRepo.addNotification(
+        AppNotification(
+          id: const Uuid().v4(),
+          title: 'Announcement: ${event.title}',
+          message: '$title: $message',
+          createdAt: DateTime.now(),
+          isRead: false,
+        ),
+      );
+    }
   }
 
   @override

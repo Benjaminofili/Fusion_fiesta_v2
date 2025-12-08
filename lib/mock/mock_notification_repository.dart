@@ -3,7 +3,8 @@ import '../data/models/app_notification.dart';
 import '../data/repositories/notification_repository.dart';
 
 class MockNotificationRepository implements NotificationRepository {
-   List<AppNotification> _notifications = [
+  // Remove 'final' so we can add to it
+  final List<AppNotification> _notifications = [
     AppNotification(
       id: '1',
       title: 'Registration Confirmed',
@@ -26,6 +27,11 @@ class MockNotificationRepository implements NotificationRepository {
       isRead: true,
     ),
   ];
+
+  // --- NEW: Method to inject new notifications from other parts of the app ---
+  void addNotification(AppNotification notification) {
+    _notifications.insert(0, notification);
+  }
 
   @override
   Future<List<AppNotification>> fetchNotifications() async {
