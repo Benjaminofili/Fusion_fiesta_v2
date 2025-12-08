@@ -3,7 +3,7 @@ import '../data/models/app_notification.dart';
 import '../data/repositories/notification_repository.dart';
 
 class MockNotificationRepository implements NotificationRepository {
-  final List<AppNotification> _notifications = [
+   List<AppNotification> _notifications = [
     AppNotification(
       id: '1',
       title: 'Registration Confirmed',

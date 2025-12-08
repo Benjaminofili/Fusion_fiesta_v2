@@ -43,4 +43,14 @@ class StorageService {
   Future<void> clearAll() async {
     await _userBox.clear(); // Deletes User AND First Launch Flag
   }
+
+  // --- NEW: Notification Preferences ---
+  bool get notifyEvents => _userBox.get('notify_events', defaultValue: true);
+  Future<void> setNotifyEvents(bool value) async => await _userBox.put('notify_events', value);
+
+  bool get notifyReminders => _userBox.get('notify_reminders', defaultValue: true);
+  Future<void> setNotifyReminders(bool value) async => await _userBox.put('notify_reminders', value);
+
+  bool get notifyPromos => _userBox.get('notify_promos', defaultValue: false);
+  Future<void> setNotifyPromos(bool value) async => await _userBox.put('notify_promos', value);
 }

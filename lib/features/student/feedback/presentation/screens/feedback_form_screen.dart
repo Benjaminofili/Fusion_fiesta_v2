@@ -1,20 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart'; // Add to pubspec
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
-import '../../../../../data/models/feedback_entry.dart';
-import '../../../../../core/services/auth_service.dart';
-import '../../../../../app/di/service_locator.dart';
 
+import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
-import '../../../../../core/constants/app_sizes.dart';
-import '../../../../../data/models/event.dart'; // Import your Event model
+import '../../../../../core/services/auth_service.dart';
+import '../../../../../data/models/event.dart';
+import '../../../../../data/models/feedback_entry.dart';
 import '../../../../../data/repositories/event_repository.dart';
 
-
 class FeedbackFormScreen extends StatefulWidget {
-
   final Event? event;
 
   const FeedbackFormScreen({super.key, this.event});
@@ -25,14 +22,12 @@ class FeedbackFormScreen extends StatefulWidget {
 
 class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
   final _commentController = TextEditingController();
-  final _eventRepository = serviceLocator<EventRepository>();
+  final _eventRepository = serviceLocator<EventRepository>(); // Existing injection
 
-  // State
   List<Event> _attendedEvents = [];
   Event? _selectedEvent;
   bool _isLoadingEvents = true;
 
-  // Rating States
   double _ratingOverall = 3.0;
   double _ratingOrganization = 3.0;
   double _ratingRelevance = 3.0;
@@ -42,7 +37,6 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
   @override
   void initState() {
     super.initState();
-    // If event passed from details, lock it. If not, fetch list.
     if (widget.event != null) {
       _selectedEvent = widget.event;
       _isLoadingEvents = false;
@@ -58,55 +52,62 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
   }
 
   Future<void> _loadAttendedEvents() async {
-    // Simulate fetching events user attended
     final allEvents = await _eventRepository.getEventsStream().first;
     if (mounted) {
       setState(() {
-        _attendedEvents = allEvents.take(3).toList(); // Mock: User attended first 3
+        _attendedEvents = allEvents.take(3).toList();
         _isLoadingEvents = false;
       });
     }
   }
 
   Future<void> _submitFeedback() async {
-    setState(() => _isSubmitting = true);
-
-    // 1. Get Current User
-    final authService = serviceLocator<AuthService>();
-    final user = await authService.currentUser;
-
-    if (user == null) {
-      // Handle error (shouldn't happen if guarded)
+    if (_selectedEvent == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select an event to rate')),
+      );
       return;
     }
 
-    // 2. Create the Feedback Object
-    final feedback = FeedbackEntry(
-      id: const Uuid().v4(),
-      eventId: widget.event?.id ?? 'general-feedback', // Handle null event case
-      userId: user.id,
-      ratingOverall: _ratingOverall,
-      ratingOrganization: _ratingOrganization,
-      ratingRelevance: _ratingRelevance,
-      comment: _commentController.text.trim(),
-      createdAt: DateTime.now(),
-    );
+    setState(() => _isSubmitting = true);
 
-    // 3. Send to Repository (Mock for now)
-    // await _feedbackRepository.submit(feedback);
-    print("📝 SUBMITTING FEEDBACK: ${feedback.toMap()}"); // Debug print
+    try {
+      final authService = serviceLocator<AuthService>();
+      final user = await authService.currentUser;
 
-    await Future.delayed(const Duration(seconds: 2));
+      if (user == null) return;
 
-    if (mounted) {
-      setState(() => _isSubmitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Thank you! Your feedback helps us improve.'),
-          backgroundColor: AppColors.success,
-        ),
+      final feedback = FeedbackEntry(
+        id: const Uuid().v4(),
+        eventId: _selectedEvent!.id, // Use the selected event ID
+        userId: user.id,
+        ratingOverall: _ratingOverall,
+        ratingOrganization: _ratingOrganization,
+        ratingRelevance: _ratingRelevance,
+        comment: _commentController.text.trim(),
+        createdAt: DateTime.now(),
       );
-      context.pop();
+
+      // --- UPDATED: Call Real Repository ---
+      await _eventRepository.submitFeedback(feedback);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Thank you! Your feedback helps us improve.'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        context.pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error submitting feedback: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -136,7 +137,6 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- HEADER SECTION ---
             Center(
               child: Column(
                 children: [
@@ -150,7 +150,6 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
                   ),
                   SizedBox(height: 24.h),
 
-                  // LOGIC: If event forced, show text. If not, show Dropdown.
                   if (widget.event != null)
                     Text(
                       widget.event!.title,
@@ -187,7 +186,6 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
             ),
             SizedBox(height: 40.h),
 
-            // --- RATING SECTIONS ---
             _buildRatingRow('Overall Experience', _ratingOverall, (v) => setState(() => _ratingOverall = v)),
             SizedBox(height: 24.h),
             _buildRatingRow('Organization', _ratingOrganization, (v) => setState(() => _ratingOrganization = v)),
@@ -196,7 +194,6 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
 
             SizedBox(height: 40.h),
 
-            // --- COMMENTS ---
             Text(
               'Additional Comments',
               style: TextStyle(
@@ -223,7 +220,6 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
 
             SizedBox(height: 40.h),
 
-            // --- SUBMIT BUTTON ---
             SizedBox(
               width: double.infinity,
               height: 56.h,

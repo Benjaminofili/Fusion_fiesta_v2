@@ -1,4 +1,4 @@
-import 'dart:io'; // Required for File
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -26,7 +26,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    // 1. Listen to real-time user updates (e.g. after editing profile)
     _authService.userStream.listen((user) {
       if (mounted) setState(() => _currentUser = user);
     });
@@ -39,50 +38,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showNotificationSettings() {
+    final storage = serviceLocator<StorageService>();
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        height: 320,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Notification Preferences',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 24),
-            SwitchListTile(
-              value: true,
-              activeColor: AppColors.primary,
-              onChanged: (v) {},
-              title: const Text('Event Updates'),
-              subtitle: const Text('Schedule changes & announcements'),
-            ),
-            SwitchListTile(
-              value: true,
-              activeColor: AppColors.primary,
-              onChanged: (v) {},
-              title: const Text('Reminders'),
-              subtitle: const Text('Upcoming event alerts'),
-            ),
-            SwitchListTile(
-              value: false,
-              activeColor: AppColors.primary,
-              onChanged: (v) {},
-              title: const Text('Promotional Alerts'),
-              subtitle: const Text('Marketing & offers'),
-            ),
-          ],
-        ),
-      ),
+      builder: (context) {
+        // StatefulBuilder allows the BottomSheet to update its own state (toggle switches)
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Container(
+              padding: const EdgeInsets.all(24),
+              height: 350, // Slightly taller
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Notification Preferences',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('Manage what alerts you receive', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                  const SizedBox(height: 24),
+
+                  // 1. Event Updates
+                  SwitchListTile(
+                    value: storage.notifyEvents,
+                    activeColor: AppColors.primary,
+                    title: const Text('Event Updates'),
+                    subtitle: const Text('Schedule changes & announcements'),
+                    onChanged: (val) {
+                      // Update Storage
+                      storage.setNotifyEvents(val);
+                      // Update UI
+                      setModalState(() {});
+                    },
+                  ),
+
+                  // 2. Reminders
+                  SwitchListTile(
+                    value: storage.notifyReminders,
+                    activeColor: AppColors.primary,
+                    title: const Text('Reminders'),
+                    subtitle: const Text('Upcoming event alerts'),
+                    onChanged: (val) {
+                      storage.setNotifyReminders(val);
+                      setModalState(() {});
+                    },
+                  ),
+
+                  // 3. Promotional
+                  SwitchListTile(
+                    value: storage.notifyPromos,
+                    activeColor: AppColors.primary,
+                    title: const Text('Promotional Alerts'),
+                    subtitle: const Text('Marketing & offers'),
+                    onChanged: (val) {
+                      storage.setNotifyPromos(val);
+                      setModalState(() {});
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
-  // --- HELPER FOR IMAGES (Handles Local File vs Network URL) ---
   ImageProvider? _getProfileImage(String? path) {
     if (path == null || path.isEmpty) return null;
     if (path.startsWith('http')) {
@@ -99,6 +125,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     final isStudent = _currentUser!.role == AppRole.student;
+    final isOrganizer = _currentUser!.role == AppRole.organizer;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
@@ -111,7 +138,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: Colors.white,
         foregroundColor: AppColors.textPrimary,
         actions: [
-          // --- EDIT PROFILE BUTTON ---
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             tooltip: 'Edit Profile',
@@ -133,7 +159,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: CircleAvatar(
                       radius: 50,
                       backgroundColor: AppColors.primary.withOpacity(0.1),
-                      // --- FIX APPLIED HERE: Use the helper method ---
                       backgroundImage: _getProfileImage(_currentUser?.profilePictureUrl),
                       child: _currentUser?.profilePictureUrl == null
                           ? const Icon(Icons.person, size: 50, color: AppColors.primary)
@@ -142,18 +167,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    _currentUser?.name ?? 'Guest User',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.bold),
+                    _currentUser?.name ?? 'User',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   Text(
                     _currentUser?.email ?? 'No email',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: Colors.grey),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
                   ),
                   const SizedBox(height: 8),
                   Chip(
@@ -171,7 +190,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
-
             const SizedBox(height: 32),
 
             // --- 2. ACADEMIC DETAILS (Student Only) ---
@@ -225,32 +243,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Column(
                 children: [
+                  // --- STUDENT MENU ---
                   if (isStudent) ...[
-                    // Registration History
                     _MenuTile(
                       icon: FontAwesomeIcons.ticket,
                       title: 'My Registrations',
                       onTap: () => context.push(AppRoutes.registeredEvents),
                     ),
                     const _DividerLine(),
-
-                    // Saved Events
                     _MenuTile(
                       icon: FontAwesomeIcons.heart,
                       title: 'Saved Events',
                       onTap: () => context.push(AppRoutes.favorites),
                     ),
                     const _DividerLine(),
-
-                    // Certificates
                     _MenuTile(
                       icon: FontAwesomeIcons.certificate,
                       title: 'My Certificates',
                       onTap: () => context.push(AppRoutes.certificates),
                     ),
                     const _DividerLine(),
-
-                    // Saved Media (Gallery)
                     _MenuTile(
                       icon: Icons.bookmark_border,
                       title: 'Saved Media',
@@ -259,24 +271,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const _DividerLine(),
                   ],
 
-                  // Notification Settings
+                  // --- ORGANIZER MENU ---
+                  if (isOrganizer) ...[
+                    _MenuTile(
+                      icon: Icons.history_edu,
+                      title: 'Communication Log',
+                      onTap: () => context.push('/organizer/communication-log'),
+                    ),
+                    const _DividerLine(),
+                    _MenuTile(
+                      icon: Icons.calendar_month,
+                      title: 'My Calendar',
+                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Use the "My Events" tab below to manage.'))
+                      ),
+                    ),
+                    _MenuTile(
+                      icon: Icons.event_note,
+                      title: 'Manage Events',
+                      onTap: () => context.push('/organizer/events'),
+                    ),
+                    const _DividerLine(),
+                  ],
+
+                  // --- COMMON SETTINGS ---
                   _MenuTile(
                     icon: Icons.notifications_none,
                     title: 'Notification Preferences',
                     onTap: _showNotificationSettings,
                   ),
                   const _DividerLine(),
-
-                  // Change Password
                   _MenuTile(
                     icon: Icons.lock_outline,
                     title: 'Change Password',
-                    onTap: () =>
-                        context.push('${AppRoutes.profile}/change-password'),
+                    onTap: () => context.push('${AppRoutes.profile}/change-password'),
                   ),
                   const _DividerLine(),
-
-                  // Help
                   _MenuTile(
                     icon: Icons.help_outline,
                     title: 'Help & Support',
@@ -311,27 +341,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
 
             const SizedBox(height: 40),
-            const Divider(),
 
-            // --- 5. DEVELOPER ZONE (Testing) ---
+            // --- 5. DEVELOPER ACTIONS ---
+            const Divider(),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: Text(
                 'DEVELOPER ACTIONS (TESTING ONLY)',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[400],
-                  letterSpacing: 1.5,
-                ),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[400], letterSpacing: 1.5),
               ),
             ),
-
-            // Reset App
             ListTile(
               tileColor: Colors.grey[100],
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               leading: const Icon(Icons.delete_forever, color: Colors.orange),
               title: const Text('Reset App State'),
               subtitle: const Text('Clears all storage & flags'),
@@ -340,9 +362,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 await storage.clearAll();
                 await _authService.signOut();
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('App Reset. Restarting...')),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('App Reset. Restarting...')));
                   context.go(AppRoutes.splash);
                 }
               },
@@ -356,17 +376,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               subtitle: const Text('Triggers a "Push" Notification'),
               onTap: () async {
                 final notifService = serviceLocator<NotificationService>();
-
-                // Trigger a realistic scenario
                 await notifService.showNotification(
-                    title: '🎓 Certificate Available!',
-                    body: 'Your certificate for "TechViz 2025" is now ready to download.'
+                    title: 'New Announcement',
+                    body: 'Please check the Communication Log for details.'
                 );
-
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Notification Sent! Check your status bar.')),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notification Sent!')));
                 }
               },
             ),
@@ -389,11 +404,7 @@ class _SectionHeader extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: Text(
         title,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: Colors.grey[600],
-        ),
+        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey[600]),
       ),
     );
   }
@@ -403,9 +414,7 @@ class _ProfileRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  const _ProfileRow(
-      {required this.icon, required this.label, required this.value});
-
+  const _ProfileRow({required this.icon, required this.label, required this.value});
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -416,15 +425,8 @@ class _ProfileRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-              ),
-              Text(
-                value,
-                style:
-                const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-              ),
+              Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+              Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
             ],
           ),
         ),
@@ -437,19 +439,13 @@ class _MenuTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final VoidCallback onTap;
-  const _MenuTile(
-      {required this.icon, required this.title, required this.onTap});
-
+  const _MenuTile({required this.icon, required this.title, required this.onTap});
   @override
   Widget build(BuildContext context) {
     return ListTile(
       leading: Icon(icon, size: 20, color: AppColors.textSecondary),
-      title: Text(
-        title,
-        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-      ),
-      trailing:
-      const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+      title: Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+      trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
       onTap: onTap,
     );
   }
@@ -457,7 +453,6 @@ class _MenuTile extends StatelessWidget {
 
 class _DividerLine extends StatelessWidget {
   const _DividerLine();
-
   @override
   Widget build(BuildContext context) {
     return const Divider(height: 1, indent: 56, endIndent: 0);

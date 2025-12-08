@@ -30,8 +30,16 @@ class _ParticipantsScreenState extends State<ParticipantsScreen> {
         );
       }
     } catch (e) {
-      // Handle error
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
+  }
+
+  void _messageParticipant(String userId) {
+    // SRS Requirement: Communicate via internal messages
+    // In a real app, navigating to: context.push('/chat/$userId');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Opening chat with Student $userId...')),
+    );
   }
 
   @override
@@ -82,6 +90,7 @@ class _ParticipantsScreenState extends State<ParticipantsScreen> {
                 registration: reg,
                 onApprove: () => _updateStatus(reg, 'approved'),
                 onReject: () => _updateStatus(reg, 'rejected'),
+                onMessage: () => _messageParticipant(reg.userId), // NEW CALLBACK
               );
             },
           );
@@ -95,20 +104,21 @@ class _ParticipantTile extends StatelessWidget {
   final Registration registration;
   final VoidCallback onApprove;
   final VoidCallback onReject;
+  final VoidCallback onMessage; // NEW
 
   const _ParticipantTile({
     required this.registration,
     required this.onApprove,
     required this.onReject,
+    required this.onMessage, // NEW
   });
 
   @override
   Widget build(BuildContext context) {
-    // In a real app, you would fetch User details using registration.userId
-    // For mock, we'll display the User ID or a placeholder name
     final isPending = registration.status == 'pending';
     final isApproved = registration.status == 'approved';
     final isRejected = registration.status == 'rejected';
+    final isAttended = registration.status == 'attended';
 
     Color statusColor = Colors.grey;
     IconData statusIcon = Icons.access_time;
@@ -119,6 +129,9 @@ class _ParticipantTile extends StatelessWidget {
     } else if (isRejected) {
       statusColor = AppColors.error;
       statusIcon = Icons.cancel;
+    } else if (isAttended) {
+      statusColor = Colors.purple;
+      statusIcon = Icons.qr_code_scanner;
     }
 
     return Container(
@@ -146,12 +159,21 @@ class _ParticipantTile extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp),
                 ),
                 Text(
-                  DateFormat('MMM d, h:mm a').format(registration.createdAt),
+                  'Reg: ${DateFormat('MMM d, h:mm a').format(registration.createdAt)}',
                   style: TextStyle(color: Colors.grey, fontSize: 12.sp),
                 ),
               ],
             ),
           ),
+
+          // --- 1. NEW: MESSAGE BUTTON ---
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
+            onPressed: onMessage,
+            tooltip: 'Message Student',
+          ),
+
+          // --- 2. APPROVAL ACTIONS ---
           if (isPending) ...[
             IconButton(
               icon: const Icon(Icons.check, color: AppColors.success),

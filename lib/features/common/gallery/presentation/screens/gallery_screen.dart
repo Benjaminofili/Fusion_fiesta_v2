@@ -1,3 +1,4 @@
+import 'dart:io'; // Required for File handling
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -23,7 +24,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   final AuthService _authService = serviceLocator<AuthService>();
 
   String _activeCategory = 'All';
-  AppRole _userRole = AppRole.visitor; // Default to safest role
+  AppRole _userRole = AppRole.visitor;
 
   @override
   void initState() {
@@ -37,7 +38,6 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   void _onToggleFavorite(String itemId) {
-    // ROLE GUARD: Visitors cannot save media
     if (_userRole == AppRole.visitor) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -51,7 +51,6 @@ class _GalleryScreenState extends State<GalleryScreen> {
       );
       return;
     }
-    // Perform action for Students/Organizers
     _galleryRepository.toggleFavorite(itemId);
   }
 
@@ -66,22 +65,18 @@ class _GalleryScreenState extends State<GalleryScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
-          // ROLE GUARD: Upload button only for Organizers
           if (canUpload)
             IconButton(
               icon: const Icon(Icons.add_a_photo, color: AppColors.primary),
               tooltip: 'Upload Media',
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Organizer Upload Screen coming soon'))
-                );
+                context.push('${AppRoutes.gallery}/upload');
               },
             ),
         ],
       ),
       body: Column(
         children: [
-          // 1. FILTER BAR
           Container(
             color: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -92,15 +87,12 @@ class _GalleryScreenState extends State<GalleryScreen> {
               onSelected: (val) => setState(() => _activeCategory = val),
             ),
           ),
-
-          // 2. MEDIA GRID
           Expanded(
             child: StreamBuilder<List<GalleryItem>>(
               stream: _galleryRepository.getGalleryStream(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-                // Client-side filtering
                 final items = snapshot.data!.where((item) {
                   return _activeCategory == 'All' || item.category == _activeCategory;
                 }).toList();
@@ -124,7 +116,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                     crossAxisCount: 2,
                     mainAxisSpacing: 12,
                     crossAxisSpacing: 12,
-                    childAspectRatio: 0.75, // Taller aspect ratio for photos
+                    childAspectRatio: 0.75,
                   ),
                   itemCount: items.length,
                   itemBuilder: (context, index) {
@@ -159,103 +151,113 @@ class _GalleryItemCard extends StatelessWidget {
     this.onTap,
   });
 
+  // --- HELPER: Handle Local File vs Network URL ---
+  ImageProvider _getImageProvider(String url) {
+    if (url.startsWith('http')) {
+      return NetworkImage(url);
+    } else {
+      return FileImage(File(url));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector( // <--- WRAP CONTAINER IN GESTURE DETECTOR
+    return GestureDetector(
       onTap: onTap,
       child: Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias, // Ensures image doesn't bleed corners
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // 1. IMAGE LAYER
-          Image.network(
-            item.url,
-            fit: BoxFit.cover,
-            loadingBuilder: (ctx, child, progress) {
-              if (progress == null) return child;
-              return Container(
-                color: Colors.grey[100],
-                child: const Center(child: Icon(Icons.image, color: Colors.white)),
-              );
-            },
-            errorBuilder: (_, __, ___) => Container(
-              color: Colors.grey[200],
-              child: const Icon(Icons.broken_image, color: Colors.grey),
-            ),
-          ),
-
-          // 2. GRADIENT OVERLAY (Readability)
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              height: 70,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.8),
-                    Colors.transparent
-                  ],
-                ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // 1. IMAGE LAYER (Updated)
+            Image(
+              image: _getImageProvider(item.url),
+              fit: BoxFit.cover,
+              loadingBuilder: (ctx, child, progress) {
+                if (progress == null) return child;
+                return Container(
+                  color: Colors.grey[100],
+                  child: const Center(child: Icon(Icons.image, color: Colors.white)),
+                );
+              },
+              errorBuilder: (_, __, ___) => Container(
+                color: Colors.grey[200],
+                child: const Icon(Icons.broken_image, color: Colors.grey),
               ),
             ),
-          ),
 
-          // 3. CAPTION
-          Positioned(
-            bottom: 8,
-            left: 8,
-            right: 40, // Space for heart icon
-            child: Text(
-              item.caption,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500
-              ),
-            ),
-          ),
-
-          // 4. ROLE-BASED ACTION (Heart)
-          Positioned(
-            bottom: 0,
-            right: 0,
-            child: IconButton(
-              icon: Icon(
-                item.isFavorite ? Icons.favorite : Icons.favorite_border,
-                color: item.isFavorite ? Colors.redAccent : Colors.white,
-                size: 22,
-              ),
-              onPressed: onFavorite,
-            ),
-          ),
-
-          // 5. VIDEO INDICATOR
-          if (item.mediaType == MediaType.video)
-            Center(
+            // 2. GRADIENT OVERLAY
+            Align(
+              alignment: Alignment.bottomCenter,
               child: Container(
-                padding: const EdgeInsets.all(8),
+                height: 70,
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
-                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.8),
+                      Colors.transparent
+                    ],
+                  ),
                 ),
-                child: const Icon(Icons.play_arrow, color: Colors.white, size: 32),
               ),
             ),
-        ],
+
+            // 3. CAPTION
+            Positioned(
+              bottom: 8,
+              left: 8,
+              right: 40,
+              child: Text(
+                item.caption,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500
+                ),
+              ),
+            ),
+
+            // 4. FAVORITE BUTTON
+            if (userRole != AppRole.visitor)
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: IconButton(
+                  icon: Icon(
+                    item.isFavorite ? Icons.favorite : Icons.favorite_border,
+                    color: item.isFavorite ? Colors.redAccent : Colors.white,
+                    size: 22,
+                  ),
+                  onPressed: onFavorite,
+                ),
+              ),
+
+            // 5. VIDEO INDICATOR
+            if (item.mediaType == MediaType.video)
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.play_arrow, color: Colors.white, size: 32),
+                ),
+              ),
+          ],
+        ),
       ),
-    ),
     );
   }
 }

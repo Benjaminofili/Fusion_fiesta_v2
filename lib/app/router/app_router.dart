@@ -48,6 +48,10 @@ import '../../features/organizer/feedback/presentation/screens/feedback_review_s
 import '../../features/organizer/post_event/presentation/screens/post_event_screen.dart';
 import '../../features/organizer/calendar/presentation/screens/organizer_calendar_screen.dart';
 import '../../features/organizer/messages/presentation/screens/organizer_messages_screen.dart';
+import '../../features/organizer/gallery/presentation/screens/gallery_upload_screen.dart';
+import '../../features/organizer/events/presentation/screens/organizer_events_screen.dart';
+import '../../features/organizer/attendance/presentation/screens/organizer_scan_selector_screen.dart';
+import '../../features/organizer/communication/presentation/screens/communication_log_screen.dart';
 
 import 'main_navigation_shell.dart';
 
@@ -108,6 +112,14 @@ class AppRouter {
       GoRoute(
         path: '/organizer/messages',
         builder: (context, state) => const OrganizerMessagesScreen(),
+      ),
+      GoRoute(
+        path: '/organizer/communication-log',
+        builder: (context, state) => const CommunicationLogScreen(),
+      ),
+      GoRoute(
+        path: '/organizer/events',
+        builder: (context, state) => const OrganizerEventsScreen(),
       ),
 
       // --- EVENTS (PARENT ROUTE) ---
@@ -226,8 +238,8 @@ class AppRouter {
             },
           ),
           GoRoute(
-            path: 'upload',
-            builder: (context, state) => const Center(child: Text("Upload Screen Placeholder")),
+            path: 'upload', // /gallery/upload
+            builder: (context, state) => const GalleryUploadScreen(),
           ),
         ],
       ),

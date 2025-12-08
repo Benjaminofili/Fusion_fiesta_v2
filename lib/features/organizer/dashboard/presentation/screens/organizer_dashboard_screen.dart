@@ -35,18 +35,7 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
     if (mounted) setState(() => _currentUser = user);
   }
 
-  // --- NEW: Status Logic ---
   String _getEventStatus(Event event) {
-    // 1. Check Approval First
-    if (event.approvalStatus == EventStatus.pending) {
-      return 'PENDING';
-    } else if (event.approvalStatus == EventStatus.rejected) {
-      return 'REJECTED';
-    } else if (event.approvalStatus == EventStatus.cancelled) {
-      return 'CANCELLED';
-    }
-
-    // 2. If Approved, check Time
     final now = DateTime.now();
     if (now.isAfter(event.startTime) && now.isBefore(event.endTime)) {
       return 'LIVE';
@@ -59,12 +48,9 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'PENDING': return Colors.orange;
-      case 'REJECTED': return Colors.red;
-      case 'CANCELLED': return Colors.red;
-      case 'LIVE': return Colors.green;
+      case 'LIVE': return Colors.red;
       case 'COMPLETED': return Colors.grey;
-      default: return AppColors.primary; // Upcoming
+      default: return AppColors.primary;
     }
   }
 
@@ -99,7 +85,6 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
           ],
         ),
         actions: [
-          // FIX: Working Notification Button
           IconButton(
             icon: const Icon(Icons.notifications_none, color: Colors.black),
             onPressed: () => context.push(AppRoutes.notifications),
@@ -107,6 +92,7 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'dashboard_create_event',
         onPressed: () => context.push('${AppRoutes.events}/create'),
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add),
@@ -117,12 +103,10 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-          // Filter for THIS organizer
           final myEvents = snapshot.data!.where((e) {
             return e.organizer == _currentUser!.name || e.organizer == 'Tech Club';
           }).toList();
 
-          // Calculate Stats
           int totalRegistrations = 0;
           for (var e in myEvents) {
             totalRegistrations += e.registeredCount;
@@ -157,7 +141,7 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
                 ),
                 SizedBox(height: 24.h),
 
-                // --- 2. QUICK ACTIONS (Calendar & Messages Added) ---
+                // --- 2. QUICK ACTIONS ---
                 Text('Quick Actions', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
                 SizedBox(height: 12.h),
                 Row(
@@ -173,29 +157,38 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
                       label: 'Queries',
                       onTap: () => context.push('/organizer/messages'),
                     ),
-                    SizedBox(width: 12.w),
+                  ],
+                ),
+                SizedBox(height: 12.h),
+                Row(
+                  children: [
                     _ActionButton(
                       icon: Icons.qr_code_scanner,
                       label: 'Scan QR',
                       onTap: () {
                         if (myEvents.isNotEmpty) {
-                          // For mock, just grab the first event or show picker
                           context.push('${AppRoutes.events}/attendance', extra: myEvents.first);
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No events to scan')));
                         }
                       },
                     ),
+                    SizedBox(width: 12.w),
+                    _ActionButton(
+                      icon: Icons.photo_library_outlined,
+                      label: 'Gallery',
+                      onTap: () => context.push(AppRoutes.gallery),
+                    ),
                   ],
                 ),
                 SizedBox(height: 32.h),
 
-                // --- 3. MY EVENTS LIST (With Status) ---
+                // --- 3. MY EVENTS LIST (REFACTORED CARD) ---
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('My Events', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
-                    TextButton(onPressed: () {}, child: const Text('View All')),
+                    TextButton(onPressed: () => context.push('/organizer/events'), child: const Text('View All')),
                   ],
                 ),
 
@@ -216,98 +209,148 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
                       final statusColor = _getStatusColor(status);
 
                       return Card(
-                        margin: EdgeInsets.only(bottom: 12.h),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        margin: EdgeInsets.only(bottom: 16.h),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
                         elevation: 0,
                         color: Colors.white,
-                        child: Column(
-                          children: [
-                            ListTile(
-                              contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                              leading: Container(
-                                padding: EdgeInsets.all(10.w),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(Icons.event_note, color: AppColors.primary),
+                        child: Padding(
+                          padding: EdgeInsets.all(16.w),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // TOP ROW: Icon + Title + Menu
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: EdgeInsets.all(10.w),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12.r),
+                                    ),
+                                    child: Icon(Icons.event_note, color: AppColors.primary, size: 24.sp),
+                                  ),
+                                  SizedBox(width: 12.w),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // Title (Full Width)
+                                        Text(
+                                          event.title,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16.sp,
+                                            color: AppColors.textPrimary,
+                                            height: 1.2,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        SizedBox(height: 6.h),
+                                        // Metadata + Status
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                                              decoration: BoxDecoration(
+                                                color: statusColor.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(4.r),
+                                              ),
+                                              child: Text(
+                                                status,
+                                                style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.bold, color: statusColor),
+                                              ),
+                                            ),
+                                            SizedBox(width: 8.w),
+                                            Expanded(
+                                              child: Text(
+                                                '${event.registeredCount} Reg. • ${event.location}',
+                                                style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Menu Button (Top Right)
+                                  SizedBox(
+                                    width: 24.w,
+                                    height: 24.w,
+                                    child: PopupMenuButton<String>(
+                                      padding: EdgeInsets.zero,
+                                      icon: Icon(Icons.more_vert, size: 20.sp, color: Colors.grey),
+                                      onSelected: (value) {
+                                        if (value == 'announce') {
+                                          context.push('${AppRoutes.events}/announce', extra: event);
+                                        } else if (value == 'feedback') {
+                                          context.push('${AppRoutes.events}/feedback-review', extra: event);
+                                        } else if (value == 'close') {
+                                          context.push('${AppRoutes.events}/post-event', extra: event);
+                                        }
+                                      },
+                                      itemBuilder: (context) => [
+                                        const PopupMenuItem(
+                                          value: 'announce',
+                                          child: Row(children: [Icon(Icons.campaign, size: 18), SizedBox(width: 8), Text('Announcement')]),
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'feedback',
+                                          child: Row(children: [Icon(Icons.star_half, size: 18), SizedBox(width: 8), Text('View Feedback')]),
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'close',
+                                          child: Row(children: [Icon(Icons.check_circle_outline, size: 18), SizedBox(width: 8), Text('Post-Event')]),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                              title: Row(
+
+                              SizedBox(height: 16.h),
+                              const Divider(height: 1),
+                              SizedBox(height: 8.h),
+
+                              // BOTTOM ROW: Action Buttons
+                              Row(
                                 children: [
                                   Expanded(
-                                      child: Text(
-                                          event.title,
-                                          style: const TextStyle(fontWeight: FontWeight.bold),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis
-                                      )
-                                  ),
-                                  // STATUS BADGE
-                                  Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
-                                    decoration: BoxDecoration(
-                                      color: statusColor.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(4),
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => context.push('${AppRoutes.events}/participants', extra: event),
+                                      icon: const Icon(Icons.people, size: 16),
+                                      label: const Text('Participants'),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: EdgeInsets.symmetric(vertical: 10.h),
+                                        side: BorderSide(color: Colors.grey.shade300),
+                                        foregroundColor: AppColors.textSecondary,
+                                      ),
                                     ),
-                                    child: Text(
-                                        status,
-                                        style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.bold, color: statusColor)
+                                  ),
+                                  SizedBox(width: 12.w),
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => context.push('${AppRoutes.events}/edit', extra: event),
+                                      icon: const Icon(Icons.edit, size: 16),
+                                      label: const Text('Edit Event'),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: EdgeInsets.symmetric(vertical: 10.h),
+                                        side: BorderSide(color: Colors.grey.shade300),
+                                        foregroundColor: AppColors.textSecondary,
+                                      ),
                                     ),
                                   ),
                                 ],
-                              ),
-                              subtitle: Text(
-                                '${event.registeredCount} Registered • ${event.location}',
-                                style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
-                              ),
-                              trailing: PopupMenuButton<String>(
-                                onSelected: (value) {
-                                  if (value == 'announce') {
-                                    context.push('${AppRoutes.events}/announce', extra: event);
-                                  } else if (value == 'feedback') {
-                                    context.push('${AppRoutes.events}/feedback-review', extra: event);
-                                  } else if (value == 'close') {
-                                    context.push('${AppRoutes.events}/post-event', extra: event);
-                                  }
-                                },
-                                itemBuilder: (context) => [
-                                  const PopupMenuItem(
-                                    value: 'announce',
-                                    child: Row(children: [Icon(Icons.campaign, size: 18), SizedBox(width: 8), Text('Announcement')]),
-                                  ),
-                                  const PopupMenuItem(
-                                    value: 'feedback',
-                                    child: Row(children: [Icon(Icons.star_half, size: 18), SizedBox(width: 8), Text('View Feedback')]),
-                                  ),
-                                  const PopupMenuItem(
-                                    value: 'close',
-                                    child: Row(children: [Icon(Icons.check_circle_outline, size: 18), SizedBox(width: 8), Text('Post-Event')]),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Divider(height: 1),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                TextButton.icon(
-                                  icon: const Icon(Icons.people, size: 16),
-                                  label: const Text('Participants'),
-                                  onPressed: () => context.push('${AppRoutes.events}/participants', extra: event),
-                                ),
-                                TextButton.icon(
-                                  icon: const Icon(Icons.edit, size: 16),
-                                  label: const Text('Edit'),
-                                  onPressed: () => context.push('${AppRoutes.events}/edit', extra: event),
-                                ),
-                              ],
-                            )
-                          ],
+                              )
+                            ],
+                          ),
                         ),
                       );
                     },
                   ),
-
                 SizedBox(height: 80.h),
               ],
             ),
@@ -318,7 +361,7 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
   }
 }
 
-// --- KEEP YOUR WIDGET CLASSES (_StatCard, _ActionButton) AS THEY WERE ---
+// ... _StatCard and _ActionButton classes remain the same ...
 class _StatCard extends StatelessWidget {
   final String label;
   final String value;

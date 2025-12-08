@@ -30,21 +30,21 @@ class _FeedbackReviewScreenState extends State<FeedbackReviewScreen> {
   }
 
   Future<void> _loadFeedback() async {
-    await Future.delayed(const Duration(milliseconds: 800)); // Simulate fetch
-    if (mounted) {
+    final data = await serviceLocator<EventRepository>().getFeedbackForEvent(widget.event.id);    if (mounted) {
       setState(() {
         _isLoading = false;
         // Mock Data Generator
-        _feedbacks = List.generate(5, (index) => FeedbackEntry(
-          id: 'fb-$index',
-          eventId: widget.event.id,
-          userId: 'student-${index + 10}',
-          ratingOverall: (index % 2 == 0) ? 5.0 : 4.0,
-          ratingOrganization: 4.0,
-          ratingRelevance: 5.0,
-          comment: index == 0 ? 'Amazing event! Learned so much.' : 'Great content but started late.',
-          createdAt: DateTime.now().subtract(Duration(days: index)),
-        ));
+        // _feedbacks = List.generate(5, (index) => FeedbackEntry(
+        //   id: 'fb-$index',
+        //   eventId: widget.event.id,
+        //   userId: 'student-${index + 10}',
+        //   ratingOverall: (index % 2 == 0) ? 5.0 : 4.0,
+        //   ratingOrganization: 4.0,
+        //   ratingRelevance: 5.0,
+        //   comment: index == 0 ? 'Amazing event! Learned so much.' : 'Great content but started late.',
+        //   createdAt: DateTime.now().subtract(Duration(days: index)),
+        // ));
+        _feedbacks = data;
       });
     }
   }

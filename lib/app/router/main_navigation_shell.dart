@@ -15,6 +15,8 @@ import '../../features/common/gallery/presentation/screens/gallery_screen.dart';
 import '../../features/common/profile/presentation/screens/profile_screen.dart';
 import '../../features/organizer/dashboard/presentation/screens/organizer_dashboard_screen.dart';
 import '../../features/student/dashboard/presentation/screens/student_dashboard_screen.dart';
+import '../../features/organizer/events/presentation/screens/organizer_events_screen.dart';
+import '../../features/organizer/attendance/presentation/screens/organizer_scan_selector_screen.dart';
 
 class MainNavigationShell extends StatefulWidget {
   const MainNavigationShell({super.key});
@@ -146,8 +148,8 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
       case AppRole.organizer:
         return [
           const OrganizerDashboardScreen(),
-          const Center(child: Text("My Events")),
-          const Center(child: Text("QR Scanner")),
+          const OrganizerEventsScreen(),
+          const OrganizerScanSelectorScreen(),
           const ProfileScreen(),
         ];
       case AppRole.student:

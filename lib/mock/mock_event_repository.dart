@@ -2,14 +2,17 @@ import 'dart:async';
 import 'package:uuid/uuid.dart';
 import '../data/models/event.dart';
 import '../data/models/registration.dart';
+import '../data/models/feedback_entry.dart';
 import '../data/repositories/event_repository.dart';
-import '../app/di/service_locator.dart'; // To access NotificationService
+import '../app/di/service_locator.dart';
 import '../../core/services/notification_service.dart';
 
 class MockEventRepository implements EventRepository {
   final _eventController = StreamController<List<Event>>.broadcast();
   final _registrationController = StreamController<List<String>>.broadcast(); // For Student IDs
   final _favoriteController = StreamController<List<String>>.broadcast();
+  final List<Map<String, String>> _communicationLogs = [];
+  final List<FeedbackEntry> _feedbacks = [];
 
   // NEW: Stream specifically for Organizer's Participant List
   final _organizerRegistrationsController = StreamController<List<Registration>>.broadcast();
@@ -133,7 +136,6 @@ class MockEventRepository implements EventRepository {
   Future<Event> getEvent(String id) async => _events.firstWhere((e) => e.id == id);
 
   // --- STUDENT ACTIONS ---
-
   @override
   Future<void> registerForEvent(String eventId, String userId) async {
     await Future.delayed(const Duration(milliseconds: 300));
@@ -197,7 +199,6 @@ class MockEventRepository implements EventRepository {
   }
 
   // --- ORGANIZER ACTIONS ---
-
   @override
   Future<void> createEvent(Event event) async {
     await Future.delayed(const Duration(seconds: 1));
@@ -255,30 +256,43 @@ class MockEventRepository implements EventRepository {
   Future<void> broadcastAnnouncement(String eventId, String title, String message) async {
     await Future.delayed(const Duration(seconds: 1));
 
-    // 1. Find the event name for context
     final event = _events.firstWhere((e) => e.id == eventId);
 
-    // 2. Find all registered students
-    final recipients = _allRegistrations
-        .where((r) => r.eventId == eventId && r.status != 'rejected')
-        .map((r) => r.userId)
-        .toList();
+    // 2. SAVE LOG
+    _communicationLogs.insert(0, {
+      'title': title,
+      'event': event.title,
+      'date': DateTime.now().toString(), // formatted later
+      'msg': message,
+    });
 
-    // 3. Send Notification to each (Simulated via NotificationService)
+    // 3. Show Notification (Existing logic)
     final notifService = serviceLocator<NotificationService>();
-
-    // In a real backend, you'd loop through FCM tokens.
-    // Here we just trigger a local notification to simulate the Organizer "seeing" it works.
     await notifService.showNotification(
-      title: '📢 Announcement: ${event.title}',
+      title: '📢 $title',
       body: message,
     );
+  }
 
-    // Note: In a real app, this would also add to a persistent "Announcements" collection.
+  @override
+  Future<List<Map<String, String>>> getCommunicationLogs() async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    return _communicationLogs;
+  }
+
+  @override
+  Future<void> submitFeedback(FeedbackEntry feedback) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    _feedbacks.insert(0, feedback);
+  }
+
+  @override
+  Future<List<FeedbackEntry>> getFeedbackForEvent(String eventId) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    return _feedbacks.where((f) => f.eventId == eventId).toList();
   }
 
   // --- HELPERS ---
-
   void _notifyRegistrationUpdates() {
     _registrationController.add([]); // Updates Student "My Schedule"
     _organizerRegistrationsController.add([]); // Updates Organizer "Participants List"
