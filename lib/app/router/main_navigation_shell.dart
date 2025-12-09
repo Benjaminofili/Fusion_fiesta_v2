@@ -10,6 +10,8 @@ import '../../data/models/user.dart';
 
 // Screens
 import '../../features/admin/dashboard/presentation/screens/admin_dashboard_screen.dart';
+import '../../features/admin/reports/presentation/screens/reports_screen.dart';
+import '../../features/admin/users/presentation/screens/user_management_screen.dart';
 import '../../features/common/event_catalog/presentation/screens/event_catalog_screen.dart';
 import '../../features/common/gallery/presentation/screens/gallery_screen.dart';
 import '../../features/common/profile/presentation/screens/profile_screen.dart';
@@ -141,8 +143,8 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
       case AppRole.admin:
         return [
           const AdminDashboardScreen(),
-          const Center(child: Text("User Management")),
-          const Center(child: Text("Reports")),
+          const UserManagementScreen(),
+          const ReportsScreen(),
           const ProfileScreen(),
         ];
       case AppRole.organizer:

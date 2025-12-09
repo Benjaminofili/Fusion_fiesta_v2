@@ -4,7 +4,7 @@ import '../../core/errors/app_failure.dart';
 import '../../core/services/storage_service.dart';
 import '../models/user.dart';
 import '../repositories/auth_repository.dart';
-import '../../mock/mock_data.dart';
+import '../../mock/mock_data.dart'; // Ensure mock data is imported
 
 class AuthRepositoryImpl implements AuthRepository {
   final StorageService _storageService;
@@ -28,28 +28,34 @@ class AuthRepositoryImpl implements AuthRepository {
       throw AppFailure('User not found. Please register first.');
     }
 
-    // 1. DYNAMIC PASSWORD CHECK
-    // Check against our map, default to 'password' if missing
-    final storedPass = mockPasswords[email] ?? 'password';
+    final user = mockUserDatabase[email]!;
 
-    // Allow the specific user password OR the universal guest pass
+    // 1. Check Password
+    final storedPass = mockPasswords[email] ?? 'password';
     if (password != storedPass && password != 'guest123') {
       throw AppFailure('Invalid email or password.');
     }
 
-    return mockUserDatabase[email]!;
+    // 2. CHECK ACCOUNT STATUS (The Fix)
+    // If Admin deactivated the account (isApproved == false), block access.
+    if (!user.isApproved) {
+      if (user.role == AppRole.student) {
+        throw AppFailure('Your account has been deactivated. Contact Admin.');
+      } else {
+        throw AppFailure('Account pending approval or deactivated.');
+      }
+    }
+
+    return user;
   }
 
-  // --- NEW: Change Password Logic ---
   @override
   Future<void> changePassword(String email, String currentPassword, String newPassword) async {
     await _simulateNetworkDelay();
-
     final storedPass = mockPasswords[email] ?? 'password';
     if (currentPassword != storedPass) {
       throw AppFailure('Incorrect current password.');
     }
-
     mockPasswords[email] = newPassword;
   }
 
@@ -63,6 +69,7 @@ class AuthRepositoryImpl implements AuthRepository {
       email: 'guest_$uniqueId@temp.com',
       role: AppRole.visitor,
       profileCompleted: true,
+      isApproved: true, // Guests are auto-approved
     );
     mockUserDatabase[guestUser.email] = guestUser;
     return guestUser;
@@ -76,7 +83,7 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     mockUserDatabase[user.email] = user;
-    mockPasswords[user.email] = password; // Save password
+    mockPasswords[user.email] = password;
     return user;
   }
 

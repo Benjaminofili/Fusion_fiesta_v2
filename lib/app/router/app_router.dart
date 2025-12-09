@@ -53,6 +53,12 @@ import '../../features/organizer/events/presentation/screens/organizer_events_sc
 import '../../features/organizer/attendance/presentation/screens/organizer_scan_selector_screen.dart';
 import '../../features/organizer/communication/presentation/screens/communication_log_screen.dart';
 
+// --- ADMIN Screens ---
+import '../../features/admin/event_approvals/presentation/screens/event_approvals_screen.dart';
+import '../../features/admin/moderation/presentation/screens/moderation_screen.dart';
+import '../../features/admin/support/presentation/screens/support_inbox_screen.dart';
+import '../../features/admin/alerts/presentation/screens/alerts_screen.dart';
+
 import 'main_navigation_shell.dart';
 
 class AppRouter {
@@ -145,6 +151,26 @@ class AppRouter {
               return EventEditorScreen(event: event);
             },
           ),
+
+          // --- ADMIN FEATURES (Top Level) ---
+          GoRoute(
+            path: '/admin/approvals',
+            builder: (context, state) => const EventApprovalsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/moderation',
+            builder: (context, state) => const ModerationScreen(),
+          ),
+          GoRoute(
+            path: '/admin/support',
+            builder: (context, state) => const SupportInboxScreen(),
+          ),
+          GoRoute(
+            path: '/admin/alerts',
+            builder: (context, state) => const AlertsScreen(),
+          ),
+
+
           // --- ORGANIZER SUB-ROUTES ---
           GoRoute(
             path: 'participants',

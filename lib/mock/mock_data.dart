@@ -22,9 +22,18 @@ final Map<String, User> mockUserDatabase = {
     isApproved: true,
     department: 'Computer Science',
   ),
+  'admin@fusionfiesta.dev': const User(
+    id: 'admin-1',
+    name: 'System Administrator',
+    email: 'admin@fusionfiesta.dev',
+    role: AppRole.admin,
+    profileCompleted: true,
+    isApproved: true,
+  ),
 };
 
 final Map<String, String> mockPasswords = {
   'student@fusionfiesta.dev': 'password',
   'organizer@fusionfiesta.dev': 'password',
+  'admin@fusionfiesta.dev': 'password',
 };
