@@ -19,9 +19,12 @@ class AdminDashboardScreen extends StatelessWidget {
     final userRepo = serviceLocator<UserRepository>();
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
         title: const Text('System Overview'),
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: false, // Hide back button on main tab
+        backgroundColor: Colors.white,
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_active_outlined, color: Colors.black),
@@ -57,8 +60,8 @@ class AdminDashboardScreen extends StatelessWidget {
                 SizedBox(width: 16.w),
                 // Users Future (Simulated Stream)
                 Expanded(
-                  child: FutureBuilder<List<User>>(
-                    future: userRepo.fetchUsers(),
+                  child: StreamBuilder<List<User>>(
+                    stream: userRepo.getUsersStream(),
                     builder: (context, snapshot) {
                       final count = snapshot.data?.length ?? 0;
                       return StatTile(
@@ -78,6 +81,7 @@ class AdminDashboardScreen extends StatelessWidget {
             Text('Quick Actions', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
             SizedBox(height: 16.h),
 
+            // 2.1 Event Proposals
             _AdminActionTile(
               title: 'Review Event Proposals',
               subtitle: 'Approve or reject organizer requests',
@@ -86,6 +90,18 @@ class AdminDashboardScreen extends StatelessWidget {
               onTap: () => context.push('/admin/approvals'),
             ),
             SizedBox(height: 12.h),
+
+            // 2.2 User Management (NEW - Added for completeness)
+            _AdminActionTile(
+              title: 'User Management',
+              subtitle: 'Approve staff & manage accounts',
+              icon: Icons.manage_accounts,
+              color: Colors.orange,
+              onTap: () => context.push('/admin/users'),
+            ),
+            SizedBox(height: 12.h),
+
+            // 2.3 Content Moderation
             _AdminActionTile(
               title: 'Content Moderation',
               subtitle: 'Gallery, Feedback & Certificates',
@@ -94,6 +110,8 @@ class AdminDashboardScreen extends StatelessWidget {
               onTap: () => context.push('/admin/moderation'),
             ),
             SizedBox(height: 12.h),
+
+            // 2.4 Support Inbox
             _AdminActionTile(
               title: 'Support Inbox',
               subtitle: 'View user inquiries',
@@ -101,6 +119,19 @@ class AdminDashboardScreen extends StatelessWidget {
               color: Colors.teal,
               onTap: () => context.push('/admin/support'),
             ),
+            SizedBox(height: 12.h),
+
+            // 2.5 Reports (FIXED LINK)
+            _AdminActionTile(
+              title: 'System Reports',
+              subtitle: 'View analytics & export data',
+              icon: Icons.analytics,
+              color: Colors.purple,
+              // ✅ FIX: Use push instead of tab animation
+              onTap: () => context.push('/admin/reports'),
+            ),
+
+            SizedBox(height: 40.h),
           ],
         ),
       ),
@@ -127,6 +158,7 @@ class _AdminActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
+      color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r), side: BorderSide(color: AppColors.border)),
       child: ListTile(
         contentPadding: EdgeInsets.all(16.w),

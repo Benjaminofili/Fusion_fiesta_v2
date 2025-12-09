@@ -22,6 +22,12 @@ class MockUserRepository implements UserRepository {
   }
 
   @override
+  Stream<List<User>> getUsersStream() {
+    // Return simple stream for testing
+    return Stream.value(_users);
+  }
+
+  @override
   Future<User> updateUser(User user) async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
     return user;

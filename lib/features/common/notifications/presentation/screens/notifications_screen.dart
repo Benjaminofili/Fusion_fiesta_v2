@@ -18,41 +18,18 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen>
     with SingleTickerProviderStateMixin {
   final NotificationRepository _repository = serviceLocator<NotificationRepository>();
-
   late TabController _tabController;
-  List<AppNotification> _notifications = [];
-  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadNotifications();
   }
 
-  Future<void> _loadNotifications() async {
-    final data = await _repository.fetchNotifications();
-    if (mounted) {
-      setState(() {
-        _notifications = data;
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _markAsRead(String id) async {
-    await _repository.markAsRead(id);
-    _loadNotifications(); // Reload to update UI
-  }
-
-  Future<void> _markAllRead() async {
-    await _repository.markAllAsRead();
-    _loadNotifications();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('All marked as read')),
-      );
-    }
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
@@ -79,7 +56,12 @@ class _NotificationsScreenState extends State<NotificationsScreen>
           IconButton(
             icon: const Icon(Icons.done_all, color: AppColors.primary),
             tooltip: 'Mark all as read',
-            onPressed: _markAllRead,
+            onPressed: () {
+              _repository.markAllAsRead();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('All marked as read')),
+              );
+            },
           ),
         ],
         bottom: TabBar(
@@ -93,14 +75,25 @@ class _NotificationsScreenState extends State<NotificationsScreen>
           ],
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-          : TabBarView(
-        controller: _tabController,
-        children: [
-          _buildList(_notifications),
-          _buildList(_notifications.where((n) => !n.isRead).toList()),
-        ],
+      // --- CHANGED: Use StreamBuilder for Real-Time Updates ---
+      body: StreamBuilder<List<AppNotification>>(
+        stream: _repository.getNotificationsStream(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+          }
+
+          final allNotifications = snapshot.data!;
+          final unreadNotifications = allNotifications.where((n) => !n.isRead).toList();
+
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              _buildList(allNotifications),
+              _buildList(unreadNotifications),
+            ],
+          );
+        },
       ),
     );
   }
@@ -127,7 +120,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         final item = items[index];
         return _NotificationCard(
           notification: item,
-          onTap: () => _markAsRead(item.id),
+          onTap: () => _repository.markAsRead(item.id),
         );
       },
     );

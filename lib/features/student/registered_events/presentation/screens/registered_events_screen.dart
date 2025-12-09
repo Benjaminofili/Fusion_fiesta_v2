@@ -76,7 +76,7 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
               width: 180.w,
               height: 200.h,
               child: Center(
-                child: QrPass(data: 'TICKET-${event.id}-${_userId}'),
+                child: QrPass(data: 'TICKET|${event.id}|$_userId'),
               ),
             ),
 

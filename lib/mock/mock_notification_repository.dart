@@ -3,7 +3,9 @@ import '../data/models/app_notification.dart';
 import '../data/repositories/notification_repository.dart';
 
 class MockNotificationRepository implements NotificationRepository {
-  // Remove 'final' so we can add to it
+  final _controller = StreamController<List<AppNotification>>.broadcast();
+
+  // Remove 'final' so we can modify the list
   final List<AppNotification> _notifications = [
     AppNotification(
       id: '1',
@@ -28,9 +30,22 @@ class MockNotificationRepository implements NotificationRepository {
     ),
   ];
 
-  // --- NEW: Method to inject new notifications from other parts of the app ---
+  // --- NEW: Stream Implementation ---
+  @override
+  Stream<List<AppNotification>> getNotificationsStream() async* {
+    yield List.from(_notifications); // Emit initial data
+    yield* _controller.stream;       // Emit future updates
+  }
+
+  // Helper to push updates to the stream
+  void _notifyListeners() {
+    _controller.add(List.from(_notifications));
+  }
+
+  // Called by other parts of the app (e.g. Event Repository)
   void addNotification(AppNotification notification) {
     _notifications.insert(0, notification);
+    _notifyListeners(); // <--- Update UI
   }
 
   @override
@@ -44,6 +59,7 @@ class MockNotificationRepository implements NotificationRepository {
     final index = _notifications.indexWhere((n) => n.id == id);
     if (index != -1) {
       _notifications[index] = _notifications[index].copyWith(isRead: true);
+      _notifyListeners(); // <--- Update UI
     }
   }
 
@@ -52,5 +68,6 @@ class MockNotificationRepository implements NotificationRepository {
     for (var i = 0; i < _notifications.length; i++) {
       _notifications[i] = _notifications[i].copyWith(isRead: true);
     }
+    _notifyListeners(); // <--- Update UI
   }
 }

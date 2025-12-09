@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:fusion_fiesta/features/admin/reports/presentation/screens/reports_screen.dart';
+import 'package:fusion_fiesta/features/admin/users/presentation/screens/user_management_screen.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_roles.dart';
@@ -208,6 +210,14 @@ class AppRouter {
       GoRoute(
         path: '/admin/alerts',
         builder: (context, state) => const AlertsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/reports',
+        builder: (context, state) => const ReportsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/users',
+        builder: (context, state) => const UserManagementScreen(),
       ),
 
       // --- STUDENT FEATURES ---

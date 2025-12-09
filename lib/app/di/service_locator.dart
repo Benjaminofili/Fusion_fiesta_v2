@@ -11,6 +11,7 @@ import '../../data/repositories/event_repository.dart';
 import '../../data/repositories/user_repository.dart';
 import '../../data/repositories/notification_repository.dart';
 import '../../data/repositories/gallery_repository.dart';
+import '../../data/repositories/admin_repository.dart';
 
 // Implementations (Real & Mock)
 import '../../data/repositories/auth_repository_impl.dart'; // NEW
@@ -18,6 +19,7 @@ import '../../data/repositories/user_repository_impl.dart'; // NEW
 import '../../mock/mock_notification_repository.dart'; // Keeping MockEvent/Notification for now
 import '../../mock/mock_event_repository.dart'; // Keeping MockEvent/Notification for now
 import '../../mock/mock_gallery_repository.dart';
+import '../../mock/mock_admin_repository.dart';
 
 final GetIt serviceLocator = GetIt.instance;
 
@@ -61,6 +63,11 @@ Future<void> configureDependencies() async {
       serviceLocator<AuthRepository>(),
       serviceLocator<StorageService>(),
     ),
+  );
+
+  // ADMIN REPO
+  serviceLocator.registerLazySingleton<AdminRepository>(
+        () => MockAdminRepository(),
   );
 
   serviceLocator.registerLazySingleton<NotificationService>(NotificationService.new);

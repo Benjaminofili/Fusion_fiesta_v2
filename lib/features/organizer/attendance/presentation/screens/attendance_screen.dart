@@ -33,18 +33,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     // Example: "TICKET-event-0-student-1"
 
     try {
-      final parts = rawData.split('-');
-      if (parts[0] != 'TICKET' || parts.length < 3) {
+      final parts = rawData.split('|');
+
+      if (parts[0] != 'TICKET' || parts.length != 3) {
         throw Exception("Invalid Ticket Format");
       }
 
-      // Logic to extract ID could be more robust, assuming simple split for mock
-      // Let's assume the ID might contain dashes, so we need to be careful.
-      // For this mock: TICKET - {eventId} - {userId}
-      // We know our mock IDs don't have extra dashes, so simple split is fine.
-
-      final scannedEventId = parts[1] + (parts.length > 3 ? "-${parts[2]}" : ""); // Handle 'event-0'
-      final userId = parts.last;
+      final scannedEventId = parts[1];
+      final userId = parts[2]; // Now correctly captures the full UUID or 'student-1'
 
       if (scannedEventId != widget.event.id) {
         _showResultDialog(false, "Wrong Event", "This ticket is for a different event.");

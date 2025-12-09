@@ -91,7 +91,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         const SnackBar(content: Text('Upgrade to Participant to register!')),
       );
       // Optional: Redirect to upgrade screen
-      // context.push(AppRoutes.roleUpgrade);
+      context.push(AppRoutes.roleUpgrade);
       return;
     }
 
@@ -118,6 +118,70 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       // Revert if failed
       setState(() => _isFavorite = !_isFavorite);
     }
+  }
+
+  void _contactOrganizer(String organizerName) {
+    final messageCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Contact $organizerName', style: TextStyle(fontSize: 18.sp)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Send a query regarding this event.',
+              style: TextStyle(fontSize: 13.sp, color: Colors.grey[600]),
+            ),
+            SizedBox(height: 16.h),
+            TextField(
+              controller: messageCtrl,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: 'Type your message here...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r)),
+                filled: true,
+                fillColor: const Color(0xFFF9FAFB),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => context.pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              if (messageCtrl.text.trim().isEmpty) return;
+
+              // Close Dialog
+              context.pop();
+
+              // Simulate Sending
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: Colors.white),
+                      SizedBox(width: 8.w),
+                      Expanded(child: Text('Message sent to $organizerName!')),
+                    ],
+                  ),
+                  backgroundColor: AppColors.success,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            icon: const Icon(Icons.send, size: 16),
+            label: const Text('Send'),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -315,11 +379,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                                     ),
                                   ),
                                   TextButton(
-                                    onPressed: () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Contact feature coming soon')),
-                                      );
-                                    },
+                                    onPressed: () => _contactOrganizer(liveEvent.organizer), // ✅ NOW FUNCTIONAL
                                     child: const Text('Contact'),
                                   ),
                                 ],

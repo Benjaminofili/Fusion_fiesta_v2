@@ -172,6 +172,7 @@ class _EventCatalogScreenState extends State<EventCatalogScreen> {
             ),
 
             // --- 2. EVENT LIST STREAM ---
+            // --- 2. EVENT LIST STREAM ---
             StreamBuilder<List<Event>>(
               stream: _eventRepository.getEventsStream(),
               builder: (context, snapshot) {
@@ -185,6 +186,12 @@ class _EventCatalogScreenState extends State<EventCatalogScreen> {
                 // Filtering Logic
                 final now = DateTime.now();
                 final filteredEvents = snapshot.data!.where((event) {
+                  // --- FIX: SECURITY FILTER ---
+                  // Only show Approved events.
+                  // (Optional: You might want to allow cancelled events to show in history)
+                  if (event.approvalStatus != EventStatus.approved) return false;
+                  // ----------------------------
+
                   // Category
                   if (_activeCategoryFilter != 'All' && event.category != _activeCategoryFilter) return false;
 
