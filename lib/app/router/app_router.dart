@@ -152,24 +152,6 @@ class AppRouter {
             },
           ),
 
-          // --- ADMIN FEATURES (Top Level) ---
-          GoRoute(
-            path: '/admin/approvals',
-            builder: (context, state) => const EventApprovalsScreen(),
-          ),
-          GoRoute(
-            path: '/admin/moderation',
-            builder: (context, state) => const ModerationScreen(),
-          ),
-          GoRoute(
-            path: '/admin/support',
-            builder: (context, state) => const SupportInboxScreen(),
-          ),
-          GoRoute(
-            path: '/admin/alerts',
-            builder: (context, state) => const AlertsScreen(),
-          ),
-
 
           // --- ORGANIZER SUB-ROUTES ---
           GoRoute(
@@ -208,6 +190,24 @@ class AppRouter {
             },
           ),
         ],
+      ),
+
+      // --- ADMIN FEATURES (Top Level) ---
+      GoRoute(
+        path: '/admin/approvals',
+        builder: (context, state) => const EventApprovalsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/moderation',
+        builder: (context, state) => const ModerationScreen(),
+      ),
+      GoRoute(
+        path: '/admin/support',
+        builder: (context, state) => const SupportInboxScreen(),
+      ),
+      GoRoute(
+        path: '/admin/alerts',
+        builder: (context, state) => const AlertsScreen(),
       ),
 
       // --- STUDENT FEATURES ---

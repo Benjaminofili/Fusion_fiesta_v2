@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:fusion_fiesta/core/constants/app_routes.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../app/di/service_locator.dart';
@@ -24,7 +25,7 @@ class _EventApprovalsScreenState extends State<EventApprovalsScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Event marked as ${status.name.toUpperCase()}'),
+          content: Text('Event has been ${status.name} successfully!'),
           backgroundColor: status == EventStatus.approved ? AppColors.success : AppColors.error,
         ),
       );
@@ -64,7 +65,12 @@ class _EventApprovalsScreenState extends State<EventApprovalsScreen> {
             separatorBuilder: (_,__) => SizedBox(height: 12.h),
             itemBuilder: (context, index) {
               final event = pendingEvents[index];
-              return Card(
+              return GestureDetector( // <--- ADD GESTURE DETECTOR
+                  onTap: () {
+                    // Navigate to details to review content
+                    context.push('${AppRoutes.events}/details', extra: event);
+                  },
+                  child: Card(
                 elevation: 0,
                 color: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r), side: BorderSide(color: Colors.orange.withOpacity(0.3))),
@@ -116,7 +122,8 @@ class _EventApprovalsScreenState extends State<EventApprovalsScreen> {
                     ],
                   ),
                 ),
-              );
+              ),
+             );
             },
           );
         },
