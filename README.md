@@ -8,9 +8,11 @@
 
 ## 📱 Screenshots
 
-| Student Dashboard | Event Details | Organizer Panel | Admin Analytics |
-|:---:|:---:|:---:|:---:|
-| | | | |
+ <img width="792" height="1793" alt="image" src="https://github.com/user-attachments/assets/9e86a7d5-27de-4948-ae06-0e574f468ebb" />  <img width="792" height="1793" alt="image" src="https://github.com/user-attachments/assets/ff71fea6-a5c3-45d1-9b2e-2bbc0531a428" />  <img width="792" height="1793" alt="image" src="https://github.com/user-attachments/assets/c1832ba7-c182-4584-9946-ec92a56e63e5" /> <img width="792" height="1793" alt="image" src="https://github.com/user-attachments/assets/90e9f160-aebe-415d-ad00-e24d92fe25b5" />
+
+
+
+
 
 ## ✨ Key Features
 
