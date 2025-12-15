@@ -139,10 +139,16 @@ class EventRepositoryImpl implements EventRepository {
   Future<void> createEvent(Event event) async {
     try {
       final eventData = _mapToEventJson(event);
-      eventData.remove('id'); // Let DB generate ID
+      eventData.remove('id');
       await _supabase.from('events').insert(eventData);
+    } on supabase.PostgrestException catch (e) {
+      // Check for the unique constraint violation code (23505)
+      if (e.code == '23505') {
+        throw AppFailure('An event with this title and time already exists.');
+      }
+      throw AppFailure('Failed to create event: ${e.message}');
     } catch (e) {
-      throw AppFailure('Failed to create event: $e');
+      throw AppFailure('Unexpected error: $e');
     }
   }
 
