@@ -25,5 +25,10 @@ class AppRoutes {
   static const String faq = '/faq';
   static const String sitemap = '/sitemap';
 
+  // Organizer Routes
+  static const String organizerDashboard = '/organizer/dashboard';
+
+  // Admin Routes
+  static const String adminDashboard = '/admin/dashboard';
 }
 

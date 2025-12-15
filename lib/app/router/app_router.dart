@@ -1,8 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:fusion_fiesta/features/admin/reports/presentation/screens/reports_screen.dart';
-import 'package:fusion_fiesta/features/admin/users/presentation/screens/user_management_screen.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_roles.dart';
@@ -17,6 +15,7 @@ import '../../features/common/auth/presentation/screens/register_screen.dart';
 import '../../features/common/auth/presentation/screens/role_upgrade_screen.dart';
 import '../../features/common/auth/presentation/screens/splash_screen.dart';
 import '../../features/common/auth/presentation/screens/forgot_password_screen.dart';
+import '../../features/common/auth/presentation/screens/verification_pending_screen.dart';
 
 // --- Common Screens ---
 import '../../features/common/event_catalog/presentation/screens/event_catalog_screen.dart';
@@ -32,7 +31,6 @@ import '../../features/common/profile/presentation/screens/profile_screen.dart';
 import '../../features/common/profile/presentation/screens/edit_profile_screen.dart';
 import '../../features/common/profile/presentation/screens/change_password_screen.dart';
 import '../../features/common/notifications/presentation/screens/notifications_screen.dart';
-import '../../features/common/auth/presentation/screens/verification_pending_screen.dart';
 
 // --- Student Screens ---
 import '../../features/student/registered_events/presentation/screens/registered_events_screen.dart';
@@ -53,7 +51,6 @@ import '../../features/organizer/calendar/presentation/screens/organizer_calenda
 import '../../features/organizer/messages/presentation/screens/organizer_messages_screen.dart';
 import '../../features/organizer/gallery/presentation/screens/gallery_upload_screen.dart';
 import '../../features/organizer/events/presentation/screens/organizer_events_screen.dart';
-import '../../features/organizer/attendance/presentation/screens/organizer_scan_selector_screen.dart';
 import '../../features/organizer/communication/presentation/screens/communication_log_screen.dart';
 
 // --- ADMIN Screens ---
@@ -61,6 +58,8 @@ import '../../features/admin/event_approvals/presentation/screens/event_approval
 import '../../features/admin/moderation/presentation/screens/moderation_screen.dart';
 import '../../features/admin/support/presentation/screens/support_inbox_screen.dart';
 import '../../features/admin/alerts/presentation/screens/alerts_screen.dart';
+import '../../features/admin/reports/presentation/screens/reports_screen.dart';
+import '../../features/admin/users/presentation/screens/user_management_screen.dart';
 
 import 'main_navigation_shell.dart';
 
@@ -79,6 +78,7 @@ class AppRouter {
 
   late final GoRouter router = GoRouter(
     initialLocation: AppRoutes.splash,
+    refreshListenable: _authService, // <--- IMPORTANT: Re-evaluates redirect on auth changes
     routes: [
       // --- STARTUP & AUTH ---
       GoRoute(
@@ -105,10 +105,12 @@ class AppRouter {
         path: AppRoutes.roleUpgrade,
         builder: (context, state) => const RoleUpgradeScreen(),
       ),
+      // --- VERIFICATION PENDING ---
       GoRoute(
         path: AppRoutes.verificationPending,
         builder: (context, state) => const VerificationPendingScreen(),
       ),
+
       // --- MAIN SHELL ---
       GoRoute(
         path: AppRoutes.main,
@@ -116,7 +118,6 @@ class AppRouter {
       ),
 
       // --- ORGANIZER FEATURES (Top Level) ---
-      // These are defined as siblings to /main, /events, etc.
       GoRoute(
         path: '/organizer/calendar',
         builder: (context, state) => const OrganizerCalendarScreen(),
@@ -157,7 +158,6 @@ class AppRouter {
               return EventEditorScreen(event: event);
             },
           ),
-
 
           // --- ORGANIZER SUB-ROUTES ---
           GoRoute(
@@ -278,7 +278,7 @@ class AppRouter {
             },
           ),
           GoRoute(
-            path: 'upload', // /gallery/upload
+            path: 'upload',
             builder: (context, state) => const GalleryUploadScreen(),
           ),
         ],
@@ -320,6 +320,7 @@ class AppRouter {
   FutureOr<String?> _resolveRedirect(BuildContext context, GoRouterState state) async {
     final location = state.uri.path;
 
+    // 1. Public Routes Check
     if (location == AppRoutes.splash ||
         location == AppRoutes.onboarding ||
         location == AppRoutes.register ||
@@ -330,15 +331,33 @@ class AppRouter {
     final user = await _authService.currentUser;
     final loggingIn = location == AppRoutes.login;
 
+    // 2. Not Authenticated
     if (user == null) {
       if (!loggingIn) return AppRoutes.login;
       return null;
     }
 
+    // 3. Organizer Approval Check (CRITICAL FIX)
+    // If user is organizer AND NOT approved...
+    if (user.role == AppRole.organizer && !user.isApproved) {
+      // If not already on the pending screen, force them there
+      if (location != AppRoutes.verificationPending) {
+        return AppRoutes.verificationPending;
+      }
+      return null; // Let them stay on the pending screen
+    }
+
+    // If they ARE approved but somehow stuck on the pending screen, move them to dashboard
+    if (location == AppRoutes.verificationPending) {
+      return AppRoutes.main;
+    }
+
+    // 4. Already Logged In (Trying to access login page)
     if (loggingIn) {
       return AppRoutes.main;
     }
 
+    // 5. Visitor Role Logic
     if (user.role == AppRole.visitor) {
       if (!user.profileCompleted && location != AppRoutes.roleUpgrade) {
         return AppRoutes.roleUpgrade;

@@ -7,9 +7,9 @@ import '../../core/services/notification_service.dart';
 import '../../core/services/storage_service.dart';
 
 // Repositories (Interfaces)
-import '../../data/repositories/SupabaseAuthRepository.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/event_repository.dart';
+import '../../data/repositories/event_repository_impl.dart';
 import '../../data/repositories/user_repository.dart';
 import '../../data/repositories/notification_repository.dart';
 import '../../data/repositories/gallery_repository.dart';
@@ -38,13 +38,8 @@ Future<void> configureDependencies() async {
 
   // 2. Register Repository
   serviceLocator.registerLazySingleton<AuthRepository>(
-        () => SupabaseAuthRepository(supabaseClient),
+        () => AuthRepositoryImpl(supabaseClient),
   );
-
-  // AUTH: Switched to Real Impl (Simulated Network)
-  // serviceLocator.registerLazySingleton<AuthRepository>(
-  //       () => AuthRepositoryImpl(serviceLocator<StorageService>()),
-  // );
 
   // USER: Switched to Real Impl
   serviceLocator.registerLazySingleton<UserRepository>(
@@ -53,7 +48,7 @@ Future<void> configureDependencies() async {
 
   // EVENTS: Keeping Mock for now (Complex data, better mocked until backend exists)
   serviceLocator.registerLazySingleton<EventRepository>(
-        () => MockEventRepository(),
+        () => EventRepositoryImpl(),
   );
 
   // NOTIFICATIONS: Keeping Mock
@@ -67,12 +62,14 @@ Future<void> configureDependencies() async {
   // ---------------------------------------------------------------------------
 
   // 3. Application Services
-  serviceLocator.registerLazySingleton<AuthService>(
-        () => AuthService(
-      serviceLocator<AuthRepository>(),
-      serviceLocator<StorageService>(),
-    ),
+  // 3. Application Services
+  final authService = AuthService(
+    serviceLocator<AuthRepository>(),
+    serviceLocator<StorageService>(),
   );
+  await authService.init(); // <--- Make sure this is called!
+
+  serviceLocator.registerLazySingleton<AuthService>(() => authService);
 
   // ADMIN REPO
   serviceLocator.registerLazySingleton<AdminRepository>(

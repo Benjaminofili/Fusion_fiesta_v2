@@ -1,3 +1,4 @@
+import 'dart:io'; // <--- NEW: Add this import
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../../app/di/service_locator.dart';
@@ -21,7 +22,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   late TextEditingController _nameController;
   late TextEditingController _mobileController;
-  late TextEditingController _deptController; // Read-only for students usually, but editable here for demo
+  late TextEditingController _deptController;
   String? _profilePicPath;
 
   bool _isLoading = false;
@@ -57,24 +58,38 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
+  // --- FIXED SAVE METHOD ---
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate() || _currentUser == null) return;
 
     setState(() => _isLoading = true);
 
     try {
+      File? imageFile;
+
+      // Check if the path is a local file (user picked a new photo)
+      // If it starts with 'http', it's the existing URL, so we don't re-upload.
+      if (_profilePicPath != null && !_profilePicPath!.startsWith('http')) {
+        imageFile = File(_profilePicPath!);
+      }
+
+      // Create the updated user object
+      // Note: We DO NOT set profilePictureUrl here if it's a local file.
+      // The repository will handle uploading the file and updating the URL.
       final updatedUser = _currentUser!.copyWith(
         name: _nameController.text.trim(),
         mobileNumber: _mobileController.text.trim(),
         department: _deptController.text.trim(),
-        profilePictureUrl: _profilePicPath,
       );
 
-      // 1. Update Backend
-      await _userRepository.updateUser(updatedUser);
+      // 1. Update Backend (Pass the image file if it exists)
+      final finalUser = await _userRepository.updateUser(
+          updatedUser,
+          newProfileImage: imageFile
+      );
 
-      // 2. Update Local Session
-      await _authService.updateUserSession(updatedUser);
+      // 2. Update Local Session with the result from backend
+      await _authService.updateUserSession(finalUser);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -90,6 +105,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+  // -------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +139,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     CircleAvatar(
                       radius: 50,
                       backgroundColor: AppColors.primary.withOpacity(0.1),
-                      backgroundImage: _profilePicPath != null ? NetworkImage(_profilePicPath!) : null, // In real app, handle FileImage vs NetworkImage
+                      // Display Network image (if URL) or File Image (if local path)
+                      backgroundImage: _getProfileImageProvider(),
                       child: _profilePicPath == null
                           ? const Icon(Icons.person, size: 50, color: AppColors.primary)
                           : null,
@@ -133,8 +150,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       right: 0,
                       child: UploadPicker(
                         label: 'Edit',
-                        allowedExtensions: const ['jpg', 'png'],
-                        onFileSelected: (file) => setState(() => _profilePicPath = file.path), // Mocking path usage
+                        allowedExtensions: const ['jpg', 'png', 'jpeg'],
+                        onFileSelected: (file) => setState(() => _profilePicPath = file.path),
                         customChild: Container(
                           padding: const EdgeInsets.all(6),
                           decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
@@ -168,7 +185,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Email is typically read-only
               TextFormField(
                 initialValue: _currentUser!.email,
                 readOnly: true,
@@ -182,6 +198,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
       ),
     );
+  }
+
+  // Helper to handle File vs Network image preview
+  ImageProvider? _getProfileImageProvider() {
+    if (_profilePicPath == null) return null;
+    if (_profilePicPath!.startsWith('http')) {
+      return NetworkImage(_profilePicPath!);
+    }
+    return FileImage(File(_profilePicPath!));
   }
 
   InputDecoration _inputDecoration(String label, IconData icon) {

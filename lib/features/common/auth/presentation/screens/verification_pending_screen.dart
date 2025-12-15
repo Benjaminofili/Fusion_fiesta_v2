@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
-import '../../../../../core/constants/app_roles.dart'; // Make sure this is imported
 import '../../../../../core/services/auth_service.dart';
-import '../../../../../data/models/user.dart';
 import '../../../../../data/repositories/user_repository.dart';
+import '../../../../../data/models/user.dart';
 
 class VerificationPendingScreen extends StatefulWidget {
   const VerificationPendingScreen({super.key});
@@ -18,107 +16,135 @@ class VerificationPendingScreen extends StatefulWidget {
 }
 
 class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
-  final _userRepo = serviceLocator<UserRepository>();
-  final _authService = serviceLocator<AuthService>();
+  final AuthService _authService = serviceLocator<AuthService>();
+  final UserRepository _userRepo = serviceLocator<UserRepository>();
 
-  String? _currentUserId;
+  // Get current raw Auth ID (not the full user profile yet)
+  final String _currentAuthId = supabase.Supabase.instance.client.auth.currentUser?.id ?? '';
 
   @override
   void initState() {
     super.initState();
-    _loadUserId();
+    // Safety check: if no auth ID, force back to login
+    if (_currentAuthId.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.go(AppRoutes.login);
+      });
+    }
   }
 
-  Future<void> _loadUserId() async {
-    final user = await _authService.currentUser;
-    if (mounted) setState(() => _currentUserId = user?.id);
+  Future<void> _handleApproval(User updatedUser) async {
+    // 1. Update the global session with fresh data
+    await _authService.updateUserSession(updatedUser);
+
+    // 2. Redirect to dashboard
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Account Approved! Welcome.'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      // Logic to decide dashboard is handled by router or manually here:
+      context.go(AppRoutes.organizerDashboard); // Or Organizer dashboard based on role
+    }
   }
 
-  Future<void> _handleApproval(User approvedUser) async {
-    // 1. Update Local Session with new status
-    await _authService.updateUserSession(approvedUser);
-
-    if (!mounted) return;
-
-    // 2. Notify User
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Account Approved! Logging you in...'),
-        backgroundColor: AppColors.success,
-      ),
-    );
-
-    // 3. Auto-Navigate to Dashboard
-    context.go(AppRoutes.main);
+  Future<void> _handleLogout() async {
+    try {
+      await _authService.signOut();
+    } catch (e) {
+      debugPrint("Logout error (harmless): $e");
+    } finally {
+      // Always go to login, even if API failed
+      if (mounted) context.go(AppRoutes.login);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_currentUserId == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: StreamBuilder<List<User>>(
-        // Listen to the Live Database Stream
-        stream: _userRepo.getUsersStream(),
+      body: StreamBuilder<User?>(
+        // Listen to the DB row in Real-time
+        stream: _userRepo.getUserStream(_currentAuthId),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-          // Find 'me' in the database
-          final me = snapshot.data!.firstWhere(
-                (u) => u.id == _currentUserId,
-            // ✅ FIX: Use a static default instead of await
-            orElse: () => const User(
-                id: '',
-                name: '',
-                email: '',
-                role: AppRole.organizer, // Default safe assumption for this screen
-                isApproved: false
-            ),
-          );
-
-          // CHECK: Are we approved yet?
-          if (me.isApproved && me.id.isNotEmpty) {
-            // Trigger navigation safely after build
-            WidgetsBinding.instance.addPostFrameCallback((_) => _handleApproval(me));
+          // 1. Handle Loading/Errors
+          if (snapshot.hasError) {
+            return _buildErrorState('Connection Error: ${snapshot.error}');
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
           }
 
+          final user = snapshot.data!;
+
+          // 2. AUTO-REDIRECT if Approved
+          // We use a microtask to avoid "setState during build" errors
+          if (user.isApproved) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _handleApproval(user);
+            });
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          // 3. Show "Pending" UI
           return Padding(
-            padding: EdgeInsets.all(32.w),
+            padding: const EdgeInsets.all(32.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Visual Indicator
-                Icon(Icons.hourglass_top_rounded, size: 80.sp, color: Colors.orange),
-                SizedBox(height: 32.h),
-
-                Text(
+                const Icon(Icons.security_update_warning, size: 80, color: Colors.orange),
+                const SizedBox(height: 24),
+                const Text(
                   'Verification Pending',
-                  style: TextStyle(fontSize: 24.sp, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: 16.h),
+                const SizedBox(height: 16),
                 Text(
-                  'Your Organizer account is currently being reviewed by an Administrator.\n\nThis screen will automatically update once your request is approved.',
-                  style: TextStyle(fontSize: 14.sp, color: AppColors.textSecondary, height: 1.5),
+                  'Your Organizer account is currently under review.\n\n'
+                      'Name: ${user.name}\n'
+                      'Role: ${user.role.name.toUpperCase()}\n\n'
+                      'You will be automatically redirected here once an Admin approves your request.',
                   textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[600], height: 1.5),
                 ),
-                SizedBox(height: 48.h),
-
-                // Option to logout/cancel
-                OutlinedButton(
-                  onPressed: () {
-                    _authService.signOut();
-                    context.go(AppRoutes.login);
-                  },
-                  child: const Text('Cancel & Logout'),
+                const SizedBox(height: 48),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: _handleLogout,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: const BorderSide(color: Colors.red),
+                      foregroundColor: Colors.red,
+                    ),
+                    child: const Text('Logout'),
+                  ),
                 ),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String msg) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, color: Colors.red, size: 48),
+          const SizedBox(height: 16),
+          Text(msg, textAlign: TextAlign.center),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _handleLogout,
+            child: const Text("Go Back to Login"),
+          )
+        ],
       ),
     );
   }

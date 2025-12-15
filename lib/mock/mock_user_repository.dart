@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:uuid/uuid.dart';
 import '../core/constants/app_roles.dart';
 import '../data/models/user.dart';
@@ -28,8 +29,14 @@ class MockUserRepository implements UserRepository {
   }
 
   @override
-  Future<User> updateUser(User user) async {
+  Future<User> updateUser(User user, {File? newProfileImage} ) async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
     return user;
+  }
+
+  @override
+  Stream<User?> getUserStream(String userId) {
+    // TODO: implement getUserStream
+    throw UnimplementedError();
   }
 }
