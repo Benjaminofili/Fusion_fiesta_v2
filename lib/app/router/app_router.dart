@@ -41,6 +41,7 @@ import '../../features/student/saved_media/presentation/screens/saved_media_scre
 import '../../features/student/payment/presentation/screens/mock_payment_screen.dart';
 
 // --- Organizer Screens ---
+import '../../features/organizer/dashboard/presentation/screens/organizer_dashboard_screen.dart'; // Ensure this import exists
 import '../../features/organizer/event_editor/presentation/screens/event_editor_screen.dart';
 import '../../features/organizer/participants/presentation/screens/participants_screen.dart';
 import '../../features/organizer/attendance/presentation/screens/attendance_screen.dart';
@@ -60,6 +61,7 @@ import '../../features/admin/support/presentation/screens/support_inbox_screen.d
 import '../../features/admin/alerts/presentation/screens/alerts_screen.dart';
 import '../../features/admin/reports/presentation/screens/reports_screen.dart';
 import '../../features/admin/users/presentation/screens/user_management_screen.dart';
+import '../../features/admin/dashboard/presentation/screens/admin_dashboard_screen.dart';
 
 import 'main_navigation_shell.dart';
 
@@ -78,7 +80,7 @@ class AppRouter {
 
   late final GoRouter router = GoRouter(
     initialLocation: AppRoutes.splash,
-    refreshListenable: _authService, // <--- IMPORTANT: Re-evaluates redirect on auth changes
+    refreshListenable: _authService,
     routes: [
       // --- STARTUP & AUTH ---
       GoRoute(
@@ -105,19 +107,26 @@ class AppRouter {
         path: AppRoutes.roleUpgrade,
         builder: (context, state) => const RoleUpgradeScreen(),
       ),
-      // --- VERIFICATION PENDING ---
       GoRoute(
         path: AppRoutes.verificationPending,
         builder: (context, state) => const VerificationPendingScreen(),
       ),
 
-      // --- MAIN SHELL ---
+      // --- MAIN SHELL (Students) ---
       GoRoute(
         path: AppRoutes.main,
         builder: (context, state) => const MainNavigationShell(),
       ),
 
       // --- ORGANIZER FEATURES (Top Level) ---
+
+      // 1. ADD THIS: The Missing Organizer Dashboard Route
+      GoRoute(
+        path: AppRoutes.organizerDashboard,
+        builder: (context, state) => const OrganizerDashboardScreen(),
+      ),
+      // ----------------------------------------------------
+
       GoRoute(
         path: '/organizer/calendar',
         builder: (context, state) => const OrganizerCalendarScreen(),
@@ -199,6 +208,10 @@ class AppRouter {
       ),
 
       // --- ADMIN FEATURES (Top Level) ---
+      GoRoute(
+        path: AppRoutes.adminDashboard, // Ensure this constant exists in AppRoutes
+        builder: (context, state) => const AdminDashboardScreen(),
+      ),
       GoRoute(
         path: '/admin/approvals',
         builder: (context, state) => const EventApprovalsScreen(),
@@ -337,27 +350,28 @@ class AppRouter {
       return null;
     }
 
-    // 3. Organizer Approval Check (CRITICAL FIX)
-    // If user is organizer AND NOT approved...
+    // 3. Organizer Approval Check
     if (user.role == AppRole.organizer && !user.isApproved) {
-      // If not already on the pending screen, force them there
       if (location != AppRoutes.verificationPending) {
         return AppRoutes.verificationPending;
       }
-      return null; // Let them stay on the pending screen
+      return null;
     }
 
-    // If they ARE approved but somehow stuck on the pending screen, move them to dashboard
+    // 4. Organizer Approved -> Dashboard Redirect
     if (location == AppRoutes.verificationPending) {
-      return AppRoutes.main;
+      // FIX: Send to the Organizer Dashboard, not Main
+      return AppRoutes.organizerDashboard;
     }
 
-    // 4. Already Logged In (Trying to access login page)
+    // 5. Already Logged In (Trying to access login)
     if (loggingIn) {
+      if (user.role == AppRole.admin) return AppRoutes.adminDashboard;
+      if (user.role == AppRole.organizer) return AppRoutes.organizerDashboard;
       return AppRoutes.main;
     }
 
-    // 5. Visitor Role Logic
+    // 6. Visitor Role Logic
     if (user.role == AppRole.visitor) {
       if (!user.profileCompleted && location != AppRoutes.roleUpgrade) {
         return AppRoutes.roleUpgrade;
