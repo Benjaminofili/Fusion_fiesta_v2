@@ -66,10 +66,11 @@ class _OrganizerEventsScreenState extends State<OrganizerEventsScreen> with Sing
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-          // Filter for THIS organizer
+          // Filter for events where the user is Organizer OR Co-Organizer
           final allEvents = snapshot.data!.where((e) {
-            // Mock logic: Match name or hardcoded team name
-            return e.organizer == _organizerName || e.organizer == 'Tech Club';
+            return e.organizer == _organizerName ||
+                e.organizer == 'Tech Club' || // Keep for mock data visibility
+                e.coOrganizers.contains(_organizerName); // ✅ FIX: Check Co-Organizers
           }).toList();
 
           final now = DateTime.now();
@@ -116,12 +117,53 @@ class _EventList extends StatelessWidget {
       separatorBuilder: (_,__) => SizedBox(height: 12.h),
       itemBuilder: (context, index) {
         final event = events[index];
+
+        // Status Logic
+        Color statusColor;
+        String statusText;
+
+        switch (event.approvalStatus) {
+          case EventStatus.approved:
+            statusColor = AppColors.success;
+            statusText = "LIVE";
+            break;
+          case EventStatus.rejected:
+            statusColor = AppColors.error;
+            statusText = "REJECTED";
+            break;
+          case EventStatus.cancelled:
+            statusColor = Colors.grey;
+            statusText = "CANCELLED";
+            break;
+          default:
+            statusColor = Colors.orange;
+            statusText = "PENDING";
+        }
+
         return Card(
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r), side: BorderSide(color: AppColors.border)),
           child: ListTile(
             contentPadding: EdgeInsets.all(16.w),
-            title: Text(event.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Row(
+              children: [
+                Expanded(child: Text(event.title, style: const TextStyle(fontWeight: FontWeight.bold))),
+                // Status Badge (Only show on active tab)
+                if (!isHistory)
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                    decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4.r),
+                        border: Border.all(color: statusColor.withOpacity(0.2))
+                    ),
+                    child: Text(
+                        statusText,
+                        style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.bold, color: statusColor)
+                    ),
+                  ),
+              ],
+            ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

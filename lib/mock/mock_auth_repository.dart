@@ -42,4 +42,10 @@ class MockAuthRepository implements AuthRepository {
   Future<void> signOut() async {
     _currentUser = null;
   }
+
+  @override
+  Future<User> signInAsGuest() {
+    // TODO: implement signInAsGuest
+    throw UnimplementedError();
+  }
 }

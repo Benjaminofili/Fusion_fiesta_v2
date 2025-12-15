@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/widgets/upload_picker.dart';
 import '../../../../../data/models/event.dart';
+import '../../../../../data/repositories/event_repository.dart';
 
 class PostEventScreen extends StatefulWidget {
   final Event event;
@@ -21,14 +23,41 @@ class _PostEventScreenState extends State<PostEventScreen> {
   String? _resultsPath;
 
   Future<void> _publishUpdates() async {
+    // Validation
+    if (_certPath == null && _resultsPath == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a file to upload.')));
+      return;
+    }
+
     setState(() => _isLoading = true);
-    // Simulate upload to backend
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Results & Certificates Published!'), backgroundColor: AppColors.success),
-      );
-      context.pop();
+
+    try {
+      final repo = serviceLocator<EventRepository>();
+
+      // 1. Generate Certificates if a file was picked
+      if (_certPath != null) {
+        await repo.generateCertificatesForEvent(widget.event.id, _certPath!);
+      }
+
+      // 2. Broadcast Results (using existing announcement system)
+      if (_resultsPath != null) {
+        await repo.broadcastAnnouncement(
+            widget.event.id,
+            'Results Published',
+            'The results and winners for ${widget.event.title} are now available!'
+        );
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Published successfully! Students notified.'), backgroundColor: AppColors.success),
+        );
+        context.pop();
+      }
+    } catch (e) {
+      // ... handle error
+    } finally {
+      if(mounted) setState(() => _isLoading = false);
     }
   }
 

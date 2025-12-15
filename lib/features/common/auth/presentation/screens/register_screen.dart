@@ -117,6 +117,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // Routing Logic
       if (_isStaff) {
         _showStaffApprovalDialog();
+        // context.go(AppRoutes.verificationPending);
       } else {
         // Both Visitor and Participant go to dashboard
         context.go(AppRoutes.main);
@@ -146,7 +147,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           TextButton(
             onPressed: () {
               context.pop();
-              context.go(AppRoutes.login);
+              context.go(AppRoutes.verificationPending);
+              // context.go(AppRoutes.login);
             },
             child: const Text('OK'),
           ),

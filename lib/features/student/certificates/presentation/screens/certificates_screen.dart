@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart'; // Import Routes
+import '../../../../../core/services/auth_service.dart';
 import '../../../../../data/models/certificate.dart';
 import '../../../../../data/models/event.dart';
 import '../../../../../data/repositories/event_repository.dart';
@@ -33,32 +34,17 @@ class _CertificatesScreenState extends State<CertificatesScreen> {
   }
 
   Future<void> _loadData() async {
-    await Future.delayed(const Duration(milliseconds: 800));
+    // Get current user ID
+    final user = await serviceLocator<AuthService>().currentUser;
+    if (user == null) return;
 
     try {
+      // 1. Fetch Events (for metadata like Title)
       final events = await _eventRepository.getEventsStream().first;
       final eventMap = {for (var e in events) e.id: e};
 
-      // Mock Data with Payment Logic
-      final certs = [
-        Certificate(
-          id: 'cert-001',
-          userId: 'user-123',
-          eventId: 'event-0',
-          url: 'https://example.com/cert1.pdf',
-          issuedAt: DateTime.now().subtract(const Duration(days: 12)),
-          isPaid: true, // Free/Already Paid
-        ),
-        Certificate(
-          id: 'cert-002',
-          userId: 'user-123',
-          eventId: 'event-1',
-          url: 'https://example.com/cert2.pdf',
-          issuedAt: DateTime.now().subtract(const Duration(days: 45)),
-          fee: 5.00,
-          isPaid: false, // REQUIRES PAYMENT
-        ),
-      ];
+      // 2. FIX: Fetch Real Certificates from Repository
+      final certs = await _eventRepository.getUserCertificates(user.id);
 
       if (mounted) {
         setState(() {

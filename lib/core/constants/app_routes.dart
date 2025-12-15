@@ -5,6 +5,7 @@ class AppRoutes {
   static const String register = '/register';
   static const String forgotPassword = '/forgot-password';
   static const String roleUpgrade = '/role-upgrade';
+  static const String verificationPending = '/verification-pending';
   static const String main = '/main';
 
   // --- NEW STUDENT ROUTES ---

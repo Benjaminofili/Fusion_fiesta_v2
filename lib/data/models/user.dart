@@ -35,6 +35,7 @@ class User extends Equatable {
   final bool isApproved;
 
   User copyWith({
+    String? id,
     String? name,
     String? email,
     AppRole? role,
@@ -47,7 +48,7 @@ class User extends Equatable {
     bool? isApproved,
   }) {
     return User(
-      id: id,
+      id: id ?? this.id,
       name: name ?? this.name,
       email: email ?? this.email,
       role: role ?? this.role,

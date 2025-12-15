@@ -31,13 +31,19 @@ class AuthService {
   }
 
   // --- NEW: Handle Guest Login ---
+  // Future<void> loginAsGuest() async {
+  //   // We cast to Impl to access the specific method,
+  //   // or you should add signInAsGuest to the abstract AuthRepository class.
+  //   if (_repository is AuthRepositoryImpl) {
+  //     final guest = await (_repository as AuthRepositoryImpl).signInAsGuest();
+  //     await _updateSession(guest);
+  //   }
+  // }
+
   Future<void> loginAsGuest() async {
-    // We cast to Impl to access the specific method,
-    // or you should add signInAsGuest to the abstract AuthRepository class.
-    if (_repository is AuthRepositoryImpl) {
-      final guest = await (_repository as AuthRepositoryImpl).signInAsGuest();
-      await _updateSession(guest);
-    }
+    // FIX: Removed the type check
+    final guest = await _repository.signInAsGuest();
+    await _updateSession(guest);
   }
 
   Future<User> signUp(User user, String password) async {

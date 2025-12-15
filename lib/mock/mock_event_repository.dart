@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:uuid/uuid.dart';
+import '../data/models/certificate.dart';
 import '../data/models/event.dart';
 import '../data/models/registration.dart';
 import '../data/models/feedback_entry.dart';
@@ -16,6 +17,7 @@ class MockEventRepository implements EventRepository {
   final _favoriteController = StreamController<List<String>>.broadcast();
   final List<Map<String, String>> _communicationLogs = [];
   final List<FeedbackEntry> _feedbacks = [];
+  final List<Certificate> _certificates = [];
 
   // NEW: Stream specifically for Organizer's Participant List
   final _organizerRegistrationsController = StreamController<List<Registration>>.broadcast();
@@ -310,6 +312,44 @@ class MockEventRepository implements EventRepository {
   Future<List<FeedbackEntry>> getFeedbackForEvent(String eventId) async {
     await Future.delayed(const Duration(milliseconds: 500));
     return _feedbacks.where((f) => f.eventId == eventId).toList();
+  }
+
+  @override
+  Future<void> generateCertificatesForEvent(String eventId, String fileUrl) async {
+    await Future.delayed(const Duration(seconds: 1));
+
+    // 1. Find all eligible students (Status = 'attended')
+    // Note: In a strict system, we use 'attended'. For this demo, we can also include 'approved'
+    // to make testing easier if you haven't scanned QR codes yet.
+    final attendees = _allRegistrations.where((r) =>
+    r.eventId == eventId && (r.status == 'attended' || r.status == 'approved')
+    );
+
+    // 2. Generate a Certificate for each student
+    for (final reg in attendees) {
+      // Prevent duplicates
+      final exists = _certificates.any((c) => c.eventId == eventId && c.userId == reg.userId);
+
+      if (!exists) {
+        _certificates.add(Certificate(
+          id: 'CERT-${DateTime.now().millisecondsSinceEpoch}-${reg.userId.substring(0,3)}',
+          userId: reg.userId,
+          eventId: eventId,
+          url: fileUrl, // In a real backend, this would be a unique PDF generation URL
+          issuedAt: DateTime.now(),
+          isPaid: true, // Assuming organizer-issued certs are prepaid or free
+          fee: 0.0,
+        ));
+      }
+    }
+
+    // Notify listeners (Optional: if you had a certificate stream)
+  }
+
+  @override
+  Future<List<Certificate>> getUserCertificates(String userId) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    return _certificates.where((c) => c.userId == userId).toList();
   }
 
   // --- HELPERS ---

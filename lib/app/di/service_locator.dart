@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/services/auth_service.dart';
 import '../../core/services/connectivity_service.dart';
@@ -6,6 +7,7 @@ import '../../core/services/notification_service.dart';
 import '../../core/services/storage_service.dart';
 
 // Repositories (Interfaces)
+import '../../data/repositories/SupabaseAuthRepository.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/event_repository.dart';
 import '../../data/repositories/user_repository.dart';
@@ -29,13 +31,20 @@ Future<void> configureDependencies() async {
   final storageService = StorageService();
   await storageService.init();
   serviceLocator.registerSingleton<StorageService>(storageService);
+  final supabaseClient = Supabase.instance.client;
 
   // 2. REPOSITORIES
   // ---------------------------------------------------------------------------
-  // AUTH: Switched to Real Impl (Simulated Network)
+
+  // 2. Register Repository
   serviceLocator.registerLazySingleton<AuthRepository>(
-        () => AuthRepositoryImpl(serviceLocator<StorageService>()),
+        () => SupabaseAuthRepository(supabaseClient),
   );
+
+  // AUTH: Switched to Real Impl (Simulated Network)
+  // serviceLocator.registerLazySingleton<AuthRepository>(
+  //       () => AuthRepositoryImpl(serviceLocator<StorageService>()),
+  // );
 
   // USER: Switched to Real Impl
   serviceLocator.registerLazySingleton<UserRepository>(

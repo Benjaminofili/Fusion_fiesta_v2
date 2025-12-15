@@ -1,3 +1,4 @@
+import '../models/certificate.dart';
 import '../models/event.dart';
 import '../models/registration.dart';
 import '../models/feedback_entry.dart';
@@ -32,5 +33,7 @@ abstract class EventRepository {
   Future<List<Map<String, String>>> getCommunicationLogs();
   Future<void> submitFeedback(FeedbackEntry feedback);
   Future<List<FeedbackEntry>> getFeedbackForEvent(String eventId);
-
+// --- CERTIFICATES ---
+  Future<void> generateCertificatesForEvent(String eventId, String fileUrl);
+  Future<List<Certificate>> getUserCertificates(String userId);
 }

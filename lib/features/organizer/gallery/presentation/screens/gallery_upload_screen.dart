@@ -42,10 +42,23 @@ class _GalleryUploadScreenState extends State<GalleryUploadScreen> {
   }
 
   Future<void> _loadEvents() async {
-    final events = await _eventRepo.getEventsStream().first;
+    // 1. Get Current User
+    final user = await _authService.currentUser;
+    final username = user?.name;
+
+    // 2. Fetch All Events
+    final allEvents = await _eventRepo.getEventsStream().first;
+
     if (mounted) {
       setState(() {
-        _myEvents = events;
+        // 3. FIX: Filter events strictly for this Organizer/Co-organizer
+        _myEvents = allEvents.where((e) {
+          // Allow 'Tech Club' for demo purposes if needed,
+          // otherwise strictly check names and co-organizer list.
+          return e.organizer == username ||
+              e.organizer == 'Tech Club' ||
+              e.coOrganizers.contains(username);
+        }).toList();
       });
     }
   }

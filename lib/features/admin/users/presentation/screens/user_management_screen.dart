@@ -79,28 +79,37 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
           ],
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-        controller: _tabController,
-        children: [
-          // 1. ALL USERS TAB (Edit Mode)
-          _UserList(
-            users: _users,
-            onTap: _showEditDialog,
-            isPendingTab: false,
-          ),
+      // ✅ CHANGED: Use StreamBuilder for Real-Time Updates
+      body: StreamBuilder<List<User>>(
+        stream: _repo.getUsersStream(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-          // 2. PENDING TAB (Quick Approve Mode)
-          _UserList(
-            users: _users.where((u) => !u.isApproved && (u.role == AppRole.organizer || u.role == AppRole.admin)).toList(),
-            onTap: (user) {
-              // Quick approve action
-              _updateUser(user.copyWith(isApproved: true));
-            },
-            isPendingTab: true,
-          ),
-        ],
+          final users = snapshot.data!;
+
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              // 1. ALL USERS TAB
+              _UserList(
+                users: users,
+                onTap: _showEditDialog,
+                isPendingTab: false,
+              ),
+
+              // 2. PENDING TAB
+              _UserList(
+                users: users.where((u) => !u.isApproved && (u.role == AppRole.organizer || u.role == AppRole.admin)).toList(),
+                onTap: (user) {
+                  _updateUser(user.copyWith(isApproved: true));
+                },
+                isPendingTab: true,
+              ),
+            ],
+          );
+        },
       ),
     );
   }

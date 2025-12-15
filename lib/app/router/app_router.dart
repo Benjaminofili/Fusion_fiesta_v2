@@ -32,6 +32,7 @@ import '../../features/common/profile/presentation/screens/profile_screen.dart';
 import '../../features/common/profile/presentation/screens/edit_profile_screen.dart';
 import '../../features/common/profile/presentation/screens/change_password_screen.dart';
 import '../../features/common/notifications/presentation/screens/notifications_screen.dart';
+import '../../features/common/auth/presentation/screens/verification_pending_screen.dart';
 
 // --- Student Screens ---
 import '../../features/student/registered_events/presentation/screens/registered_events_screen.dart';
@@ -104,7 +105,10 @@ class AppRouter {
         path: AppRoutes.roleUpgrade,
         builder: (context, state) => const RoleUpgradeScreen(),
       ),
-
+      GoRoute(
+        path: AppRoutes.verificationPending,
+        builder: (context, state) => const VerificationPendingScreen(),
+      ),
       // --- MAIN SHELL ---
       GoRoute(
         path: AppRoutes.main,
