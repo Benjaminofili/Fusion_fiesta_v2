@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import 'package:uuid/uuid.dart';
 import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart'; // Required for temp directory
 
 import '../../core/errors/app_failure.dart';
 import '../../core/constants/app_roles.dart';
@@ -39,26 +41,43 @@ class UserRepositoryImpl implements UserRepository {
   }
 
   @override
-  Future<User> updateUser(User user, {File? newProfileImage}) async {
+  Future<User> updateUser(User user, {File? newProfileImage, File? newCollegeIdImage}) async {
     try {
       String? profileImageUrl = user.profilePictureUrl;
+      String? collegeIdPath = user.collegeIdUrl; // We store the PATH for private files
 
-      // 1. Upload new image if provided
+      // 1. Upload Profile Picture (Public Bucket)
       if (newProfileImage != null) {
-        profileImageUrl = await _uploadImage(user.id, newProfileImage);
+        profileImageUrl = await _uploadFile(
+            userId: user.id,
+            file: newProfileImage,
+            bucketName: 'avatars',
+            folder: 'profile'
+        );
       }
 
-      // 2. Prepare data (Snake_case for DB)
+      // 2. Upload Student ID (Private Bucket)
+      if (newCollegeIdImage != null) {
+        collegeIdPath = await _uploadFile(
+            userId: user.id,
+            file: newCollegeIdImage,
+            bucketName: 'secure_docs',
+            folder: 'ids'
+        );
+      }
+
+      // 3. Prepare data
       final updates = {
         'name': user.name,
         'mobile_number': user.mobileNumber,
         'department': user.department,
-        'enrollment_number': user.enrolmentNumber, // DOUBLE 'L' to match DB
+        'enrollment_number': user.enrolmentNumber,
         'profile_picture_url': profileImageUrl,
+        'college_id_url': collegeIdPath, // Stores the path (e.g. "user_id/ids/file.jpg")
         'profile_completed': true,
       };
 
-      // 3. Update 'profiles' table
+      // 4. Update Database
       final data = await _supabase
           .from('profiles')
           .update(updates)
@@ -72,23 +91,19 @@ class UserRepositoryImpl implements UserRepository {
     }
   }
 
-  // --- NEW: Implement fetchUsers ---
   @override
   Future<List<User>> fetchUsers() async {
     try {
-      // Fetch all profiles, ordered by name
       final List<dynamic> data = await _supabase
           .from('profiles')
           .select()
           .order('name', ascending: true);
-
       return data.map((json) => _mapToUser(json)).toList();
     } catch (e) {
       throw AppFailure('Failed to fetch users: $e');
     }
   }
 
-  // --- NEW: Implement getUsersStream ---
   @override
   Stream<List<User>> getUsersStream() {
     try {
@@ -98,31 +113,67 @@ class UserRepositoryImpl implements UserRepository {
           .order('name', ascending: true)
           .map((data) => data.map((json) => _mapToUser(json)).toList());
     } catch (e) {
-      // Streams can't easily throw AppFailure, so we return an empty stream or rethrow
-      // Often better to just return the stream and let the UI handle errors
       return Stream.error(AppFailure('Stream error: $e'));
     }
   }
 
-  /// Helper to upload image to Supabase Storage
-  Future<String> _uploadImage(String userId, File file) async {
+  /// Consolidated Helper to Compress & Upload
+  Future<String> _uploadFile({
+    required String userId,
+    required File file,
+    required String bucketName,
+    required String folder,
+  }) async {
     try {
-      final fileExt = path.extension(file.path);
-      final fileName = '$userId/avatar_${const Uuid().v4()}$fileExt';
+      // A. Compress if Image
+      File fileToUpload = file;
+      final extension = path.extension(file.path).toLowerCase();
+      if (['.jpg', '.jpeg', '.png'].contains(extension)) {
+        fileToUpload = await _compressImage(file);
+      }
 
-      await _supabase.storage.from('user_uploads').upload(
+      // B. Upload to Supabase
+      final fileExt = path.extension(file.path);
+      final fileName = '$userId/$folder/${const Uuid().v4()}$fileExt';
+
+      await _supabase.storage.from(bucketName).upload(
         fileName,
-        file,
+        fileToUpload,
         fileOptions: const supabase.FileOptions(upsert: true),
       );
 
-      return _supabase.storage.from('user_uploads').getPublicUrl(fileName);
+      // C. Return URL or Path
+      if (bucketName == 'avatars' || bucketName == 'events') {
+        // Public Buckets: Return full Web URL
+        return _supabase.storage.from(bucketName).getPublicUrl(fileName);
+      } else {
+        // Private Buckets: Return internal path (Signed URL generated on read)
+        return fileName;
+      }
     } catch (e) {
-      throw AppFailure('Image upload failed: $e');
+      throw AppFailure('Upload failed: $e');
     }
   }
 
-  /// Helper to map DB JSON to User model
+  Future<File> _compressImage(File file) async {
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final targetPath = '${tempDir.path}/${const Uuid().v4()}.jpg';
+
+      final result = await FlutterImageCompress.compressAndGetFile(
+        file.absolute.path,
+        targetPath,
+        quality: 70, // good balance
+        minWidth: 1024,
+        minHeight: 1024,
+      );
+
+      return result != null ? File(result.path) : file;
+    } catch (e) {
+      return file; // Fallback to original if compression fails
+    }
+  }
+
   User _mapToUser(Map<String, dynamic> data) {
     return User(
       id: data['id'],
@@ -134,7 +185,7 @@ class UserRepositoryImpl implements UserRepository {
       ),
       department: data['department'],
       mobileNumber: data['mobile_number'],
-      enrolmentNumber: data['enrollment_number'], // Handle Double L
+      enrolmentNumber: data['enrollment_number'],
       profilePictureUrl: data['profile_picture_url'],
       collegeIdUrl: data['college_id_url'],
       isApproved: data['is_approved'] ?? false,

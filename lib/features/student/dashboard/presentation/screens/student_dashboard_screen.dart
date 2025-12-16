@@ -44,13 +44,24 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   }
 
   Future<void> _loadDashboardStats() async {
-    // Simulate fetching stats
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (mounted) {
-      setState(() {
-        _certificateCount = 3;
-        _feedbackCount = 2;
-      });
+    // 1. Get the current user
+    final user = _storageService.getUser();
+    if (user == null) return;
+
+    try {
+      // 2. Fetch REAL counts from Supabase
+      final certCount = await _eventRepository.getCertificateCount(user.id);
+      final feedCount = await _eventRepository.getFeedbackCount(user.id);
+
+      // 3. Update the UI
+      if (mounted) {
+        setState(() {
+          _certificateCount = certCount;
+          _feedbackCount = feedCount;
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load dashboard stats: $e');
     }
   }
 

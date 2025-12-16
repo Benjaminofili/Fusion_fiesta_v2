@@ -29,7 +29,7 @@ class MockUserRepository implements UserRepository {
   }
 
   @override
-  Future<User> updateUser(User user, {File? newProfileImage} ) async {
+  Future<User> updateUser(User user, {File? newProfileImage, File? newCollegeIdImage} ) async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
     return user;
   }

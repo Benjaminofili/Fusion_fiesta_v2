@@ -1,9 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart'; // <--- NEW IMPORT
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 
 import '../constants/app_colors.dart';
-import '../constants/app_sizes.dart';
 import '../../data/models/event.dart';
 
 class EventCard extends StatelessWidget {
@@ -21,11 +21,12 @@ class EventCard extends StatelessWidget {
     final dateFormatted = DateFormat('MMM d, yyyy').format(event.startTime);
     final timeFormatted = DateFormat('h:mm a').format(event.startTime);
 
-    // --- LOGIC: Calculate Slots ---
     final limit = event.registrationLimit;
     final registered = event.registeredCount;
     final isFull = limit != null && registered >= limit;
     final slotsLeft = limit != null ? (limit - registered) : null;
+
+    final hasBanner = event.bannerUrl != null && event.bannerUrl!.isNotEmpty;
 
     return GestureDetector(
       onTap: onTap,
@@ -35,7 +36,7 @@ class EventCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: Colors.black.withOpacity(0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -49,29 +50,44 @@ class EventCard extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                  child: Container(
+                  child: SizedBox(
                     height: 140,
                     width: double.infinity,
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    child: Icon(
-                      _getCategoryIcon(event.category),
-                      size: 40,
-                      color: AppColors.primary.withValues(alpha: 0.4),
-                    ),
+                    // LOGIC: Use CachedImage if URL exists, otherwise Default BG
+                    child: hasBanner
+                        ? CachedNetworkImage(
+                      imageUrl: event.bannerUrl!,
+                      fit: BoxFit.cover,
+                      memCacheWidth: 800, // Optimize memory (resize large images)
+                      placeholder: (context, url) => Container(
+                        color: AppColors.primary.withOpacity(0.05),
+                        child: const Center(
+                            child: SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2)
+                            )
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => _buildDefaultBackground(),
+                      fadeInDuration: const Duration(milliseconds: 300),
+                    )
+                        : _buildDefaultBackground(),
                   ),
                 ),
 
+                // Category Badge (Overlay)
                 Positioned(
                   top: 12,
                   right: 12,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: Colors.white.withOpacity(0.9),
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
+                          color: Colors.black.withOpacity(0.1),
                           blurRadius: 4,
                         ),
                       ],
@@ -157,13 +173,13 @@ class EventCard extends StatelessWidget {
                         ),
                       ),
 
-                      // --- UPDATED BADGE: Available Slots ---
+                      // Availability Badge
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: isFull
-                              ? AppColors.error.withValues(alpha: 0.1)
-                              : AppColors.success.withValues(alpha: 0.1),
+                              ? AppColors.error.withOpacity(0.1)
+                              : AppColors.success.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -183,6 +199,20 @@ class EventCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // Extracted this to use in the errorWidget
+  Widget _buildDefaultBackground() {
+    return Container(
+      color: AppColors.primary.withOpacity(0.1),
+      child: Center(
+        child: Icon(
+          _getCategoryIcon(event.category),
+          size: 40,
+          color: AppColors.primary.withOpacity(0.4),
         ),
       ),
     );

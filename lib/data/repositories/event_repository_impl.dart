@@ -23,13 +23,19 @@ class EventRepositoryImpl implements EventRepository {
         .from('events')
         .stream(primaryKey: ['id'])
         .order('start_time', ascending: true)
-        .map((data) => data.map((json) => _mapToEvent(json)).toList());
+        .map((data) {return data.map((json) => _mapToEvent(json)).toList();
+    });
   }
 
   @override
   Future<Event> getEvent(String id) async {
     try {
-      final data = await _supabase.from('events').select().eq('id', id).single();
+      final data = await _supabase
+          .from('events')
+          .select('*, profiles(name)')
+          .eq('id', id)
+          .single();
+
       return _mapToEvent(data);
     } catch (e) {
       throw AppFailure('Failed to fetch event: $e');
@@ -233,11 +239,39 @@ class EventRepositoryImpl implements EventRepository {
   Future<void> generateCertificatesForEvent(String eventId, String fileUrl) async {}
 
   @override
-  Future<List<Certificate>> getUserCertificates(String userId) async => [];
+  Future<List<Certificate>> getUserCertificates(String userId) async {
+    try {
+      final data = await _supabase
+          .from('certificates')
+          .select()
+          .eq('user_id', userId)
+          .order('issued_at', ascending: false); // Optional: sort by newest
+
+      return (data as List).map((json) => Certificate.fromJson(json)).toList();
+    } catch (e) {
+      throw AppFailure('Failed to fetch certificates: $e');
+    }
+  }
 
   // --- MAPPERS ---
 
   Event _mapToEvent(Map<String, dynamic> data) {
+    // 1. Try to find the joined profile name
+    String organizerName = 'Unknown Organizer';
+
+    // Logic: Check if 'profiles' is in the data (it comes from the join)
+    // ✅ CHANGED: 'full_name' -> 'name'
+    if (data['profiles'] != null && data['profiles']['name'] != null) {
+      organizerName = data['profiles']['name'];
+    }
+
+    // Fallback: If no join (like in the Stream), check if you have a separate column or just use ID
+    else if (data['organizer_id'] != null) {
+      // Optional: You could keep the ID here if you want, or show "Loading..."
+      // For now, let's just default to the ID if name isn't found
+      organizerName = _shortenId(data['organizer_id']);
+    }
+
     return Event(
       id: data['id'],
       title: data['title'],
@@ -246,7 +280,7 @@ class EventRepositoryImpl implements EventRepository {
       startTime: DateTime.parse(data['start_time']),
       endTime: DateTime.parse(data['end_time']),
       location: data['location'] ?? 'TBD',
-      organizer: data['organizer_id'] ?? '',
+      organizer: organizerName, // <--- NOW USES THE REAL NAME
       bannerUrl: data['banner_url'],
       guidelinesUrl: data['guidelines_url'],
       registrationLimit: data['registration_limit'],
@@ -256,6 +290,12 @@ class EventRepositoryImpl implements EventRepository {
         orElse: () => EventStatus.pending,
       ),
     );
+  }
+
+// Helper to make UUIDs look less ugly if the name fails to load
+  String _shortenId(String id) {
+    if (id.length > 8) return '${id.substring(0, 8)}...';
+    return id;
   }
 
   Map<String, dynamic> _mapToEventJson(Event event) {

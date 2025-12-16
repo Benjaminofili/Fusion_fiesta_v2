@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -30,10 +31,29 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   String? _userId;
   AppRole _userRole = AppRole.visitor;
 
+  String _organizerName = '';
+
   @override
   void initState() {
     super.initState();
+    _organizerName = widget.event.organizer;
+
     _loadUserAndStatus();
+    _loadRichEventData();
+  }
+
+  Future<void> _loadRichEventData() async {
+    try {
+      // This calls the 'getEvent' you fixed, which includes the Profile Join
+      final richEvent = await _eventRepository.getEvent(widget.event.id);
+      if (mounted) {
+        setState(() {
+          _organizerName = richEvent.organizer; // Update the UI with "Anthony"
+        });
+      }
+    } catch (e) {
+      debugPrint('Could not load rich details: $e');
+    }
   }
 
   Future<void> _loadUserAndStatus() async {
@@ -235,20 +255,43 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                         _CircleButton(icon: Icons.share_outlined, onTap: () {}),
                         SizedBox(width: 16.w),
                       ],
+                      // ... inside SliverAppBar
                       flexibleSpace: FlexibleSpaceBar(
                         background: Stack(
                           fit: StackFit.expand,
                           children: [
+                            // LAYER 1: The Default (Colored Box & Icon)
+                            // This is always rendered. If the image loads, it just covers this up.
                             Container(
-                              color: AppColors.primary.withValues(alpha: 0.1),
+                              color: AppColors.primary.withOpacity(0.1), // Light version of your primary color
                               child: Center(
                                 child: Icon(
-                                  _getCategoryIcon(liveEvent.category),
+                                  _getCategoryIcon(liveEvent.category), // Shows Music/Tech/Sports icon
                                   size: 80.sp,
-                                  color: AppColors.primary.withValues(alpha: 0.3),
+                                  color: AppColors.primary.withOpacity(0.3),
                                 ),
                               ),
                             ),
+
+                            // LAYER 2: The Actual Image (Supabase URL or External Link)
+                            // We only try to render this if the URL exists.
+                            if (liveEvent.bannerUrl != null && liveEvent.bannerUrl!.isNotEmpty)
+                              CachedNetworkImage(
+                                imageUrl: liveEvent.bannerUrl!,
+                                fit: BoxFit.cover,
+
+                                // Smooth Fade In
+                                fadeInDuration: const Duration(milliseconds: 500),
+
+                                // Placeholder (keeps the background color while loading)
+                                placeholder: (context, url) => Container(color: Colors.transparent),
+
+                                // On Error, we just hide this layer so the default icon layer shows below
+                                errorWidget: (context, url, error) => const SizedBox(),
+                              ),
+
+                            // LAYER 3: Gradient Overlay
+                            // Makes white text readable even if the image is bright
                             DecoratedBox(
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
@@ -256,7 +299,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                                   end: Alignment.bottomCenter,
                                   colors: [
                                     Colors.transparent,
-                                    Colors.black.withValues(alpha: 0.6),
+                                    Colors.black.withOpacity(0.6),
                                   ],
                                 ),
                               ),
@@ -347,7 +390,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                                     radius: 20.r,
                                     backgroundColor: AppColors.primary.withValues(alpha: 0.2),
                                     child: Text(
-                                      liveEvent.organizer.isNotEmpty ? liveEvent.organizer.substring(0, 1) : 'O',
+                                      _organizerName.isNotEmpty ? _organizerName.substring(0, 1) : 'O',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         color: AppColors.primary,
@@ -368,7 +411,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                                           ),
                                         ),
                                         Text(
-                                          liveEvent.organizer,
+                                          _organizerName,
                                           style: TextStyle(
                                             fontSize: 14.sp,
                                             fontWeight: FontWeight.w600,

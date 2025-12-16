@@ -3,8 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:uuid/uuid.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../app/di/service_locator.dart';
@@ -13,9 +11,9 @@ import '../../../../../core/constants/app_routes.dart';
 import '../../../../../core/constants/app_roles.dart';
 import '../../../../../core/services/auth_service.dart';
 import '../../../../../data/models/user.dart';
+import '../../../../../data/repositories/user_repository.dart';
 import '../../../../../core/widgets/upload_picker.dart';
 import '../../../../../core/widgets/app_text_field.dart';
-
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -27,6 +25,7 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final AuthService _authService = serviceLocator<AuthService>();
+  final UserRepository _userRepo = serviceLocator<UserRepository>();
 
   // Controllers
   final _nameController = TextEditingController();
@@ -88,36 +87,59 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Create User Object
+      // 1. Create Initial User Object (Text Data Only)
+      // Note: ID is empty here because Supabase Auth generates it.
+      // Note: We don't pass file paths here; we upload them in Step 3.
       final newUser = User(
-        id: const Uuid().v4(),
+        id: '',
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
         role: _selectedRole,
         mobileNumber: _mobileController.text.trim(),
-
-        // FIX: Send null for Department if user is a Visitor
         department: _isDepartmentRequired ? _departmentController.text.trim() : null,
-
         enrolmentNumber: _isStudentParticipant ? _enrolmentController.text.trim() : null,
-        profilePictureUrl: _profilePicturePath,
-        collegeIdUrl: _collegeIdPath,
-
-        // Logic: Staff needs approval.
-        // Students (Visitor OR Participant) are approved to enter the system immediately.
-        // Participants are "verified" by providing the extra details.
+        profilePictureUrl: null, // Will be updated after upload
+        collegeIdUrl: null,      // Will be updated after upload
         isApproved: !_isStaff,
         profileCompleted: true,
       );
 
-      await _authService.signUp(newUser, _passwordController.text);
+      // 2. Sign Up (Creates Auth User + DB Profile Row)
+      User signedUpUser = await _authService.signUp(newUser, _passwordController.text.trim());
+
+      // 3. Upload Files (Profile Pic & Student ID)
+      // We convert the String paths to File objects
+      File? profileFile;
+      if (_profilePicturePath != null) {
+        profileFile = File(_profilePicturePath!);
+      }
+
+      File? idFile;
+      if (_collegeIdPath != null) {
+        idFile = File(_collegeIdPath!);
+      }
+
+      // If we have files to upload, we call updateUser
+      if (profileFile != null || idFile != null) {
+        signedUpUser = await _userRepo.updateUser(
+          signedUpUser,
+          newProfileImage: profileFile,
+          newCollegeIdImage: idFile,
+        );
+
+        // Update local session with the new URLs/Paths
+        await _authService.updateUserSession(signedUpUser);
+      }
 
       if (!mounted) return;
 
-      // Routing Logic
+      // 4. Routing Logic
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Account created successfully!'), backgroundColor: AppColors.success),
+      );
+
       if (_isStaff) {
         _showStaffApprovalDialog();
-        // context.go(AppRoutes.verificationPending);
       } else {
         // Both Visitor and Participant go to dashboard
         context.go(AppRoutes.main);
@@ -148,7 +170,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             onPressed: () {
               context.pop();
               context.go(AppRoutes.verificationPending);
-              // context.go(AppRoutes.login);
             },
             child: const Text('OK'),
           ),
@@ -287,8 +308,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     SizedBox(height: 16.h),
 
                     // --- 4. ROLE SPECIFIC FIELDS ---
-                    // FIX: Moved Department here. It is only visible for Participants & Staff.
-
                     if (_isDepartmentRequired) ...[
                       AppTextField(
                         controller: _departmentController,
@@ -429,23 +448,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 20.sp), // Added size
+      prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 20.sp),
       filled: true,
       fillColor: Colors.white,
-      contentPadding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 20.w), // Added .h .w
+      contentPadding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 20.w),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r), // Added .r
+        borderRadius: BorderRadius.circular(12.r),
         borderSide: const BorderSide(color: AppColors.border),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r), // Added .r
+        borderRadius: BorderRadius.circular(12.r),
         borderSide: const BorderSide(color: AppColors.border),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r), // Added .r
+        borderRadius: BorderRadius.circular(12.r),
         borderSide: const BorderSide(color: AppColors.primary, width: 2),
       ),
     );
   }
-
 }

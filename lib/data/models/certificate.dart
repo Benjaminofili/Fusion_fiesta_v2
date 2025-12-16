@@ -7,8 +7,8 @@ class Certificate extends Equatable {
     required this.eventId,
     required this.url,
     required this.issuedAt,
-    this.fee = 0.0,      // NEW: Cost of certificate
-    this.isPaid = true,  // NEW: Payment status (default true for free ones)
+    this.fee = 0.0,
+    this.isPaid = true,
   });
 
   final String id;
@@ -19,7 +19,21 @@ class Certificate extends Equatable {
   final double fee;
   final bool isPaid;
 
-  // Add copyWith to handle status updates
+  factory Certificate.fromJson(Map<String, dynamic> json) {
+    return Certificate(
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      eventId: json['event_id'] as String,
+      // ✅ FIX: Matches your DB column 'url'
+      url: json['url'] as String,
+      // ✅ FIX: Matches your DB column 'issued_at'
+      issuedAt: DateTime.parse(json['issued_at']),
+      // ✅ FIX: Handles numeric type safely
+      fee: (json['fee'] as num?)?.toDouble() ?? 0.0,
+      isPaid: json['is_paid'] ?? true,
+    );
+  }
+
   Certificate copyWith({bool? isPaid}) {
     return Certificate(
       id: id,
