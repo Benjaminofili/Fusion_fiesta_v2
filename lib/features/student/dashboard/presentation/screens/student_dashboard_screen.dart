@@ -28,8 +28,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   final AuthService _authService = serviceLocator<AuthService>();
   final StorageService _storageService = serviceLocator<StorageService>();
 
-  late Stream<List<Event>> _highlightEventsStream;
-  late Stream<List<Event>> _upcomingEventsStream;
+  // We use a single stream source for efficiency
+  late Stream<List<Event>> _eventsStream;
 
   // Counters (Mocked for now)
   int _certificateCount = 0;
@@ -39,21 +39,17 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   void initState() {
     super.initState();
     _loadDashboardStats();
-    _highlightEventsStream = _eventRepository.getEventsStream().asBroadcastStream();
-    _upcomingEventsStream = _eventRepository.getEventsStream().asBroadcastStream();
+    _eventsStream = _eventRepository.getEventsStream().asBroadcastStream();
   }
 
   Future<void> _loadDashboardStats() async {
-    // 1. Get the current user
     final user = _storageService.getUser();
     if (user == null) return;
 
     try {
-      // 2. Fetch REAL counts from Supabase
       final certCount = await _eventRepository.getCertificateCount(user.id);
       final feedCount = await _eventRepository.getFeedbackCount(user.id);
 
-      // 3. Update the UI
       if (mounted) {
         setState(() {
           _certificateCount = certCount;
@@ -68,8 +64,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   Future<void> _refresh() async {
     await _loadDashboardStats();
     setState(() {
-      _highlightEventsStream = _eventRepository.getEventsStream().asBroadcastStream();
-      _upcomingEventsStream = _eventRepository.getEventsStream().asBroadcastStream();
+      _eventsStream = _eventRepository.getEventsStream().asBroadcastStream();
     });
   }
 
@@ -84,15 +79,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. GLOBAL USER STREAM: Listens to any profile changes instantly
     return StreamBuilder<User?>(
       stream: _authService.userStream,
       initialData: _storageService.getUser(),
       builder: (context, userSnapshot) {
         final user = userSnapshot.data;
 
-        // 2. USER-DEPENDENT STREAMS
-        // Only initialize these if we have a valid user ID
         final registeredIdsStream = user != null
             ? _eventRepository.getRegisteredEventIdsStream(user.id).asBroadcastStream()
             : const Stream<List<String>>.empty();
@@ -108,7 +100,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             color: AppColors.primary,
             child: CustomScrollView(
               slivers: [
-                // --- HEADER ---
                 SliverToBoxAdapter(
                   child: Stack(
                     children: [
@@ -123,24 +114,66 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                         left: 0,
                         right: 0,
                         child: _buildQuickAccessSection(
-                            context,
-                            registeredIdsStream,
-                            favoriteIdsStream
-                        ),
+                            context, registeredIdsStream, favoriteIdsStream),
                       ),
                     ],
                   ),
                 ),
-
                 SliverToBoxAdapter(child: SizedBox(height: 24.h)),
 
-                // --- NEXT EVENT ---
-                SliverToBoxAdapter(child: _buildNextEventSection(context)),
+                // --- STREAM BUILDER WRAPPER ---
+                // We wrap both sections in one builder to filter the data once
+                StreamBuilder<List<Event>>(
+                  stream: _eventsStream,
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()));
+                    }
 
-                // --- UPCOMING EVENTS ---
-                _buildUpcomingEventsSection(context),
+                    final now = DateTime.now();
 
-                SliverToBoxAdapter(child: SizedBox(height: 100.h)),
+                    // --- FIX: Filter for Active & Approved Events ---
+                    final activeEvents = snapshot.data!.where((e) {
+                      return e.endTime.isAfter(now) && // Not ended
+                          e.approvalStatus == EventStatus.approved; // Approved
+                    }).toList();
+
+                    // If no events, show empty state
+                    if (activeEvents.isEmpty) {
+                      return SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.all(24.w),
+                          child: const Center(child: Text("No upcoming events right now.")),
+                        ),
+                      );
+                    }
+
+                    // Split: First one is "Next Event", rest are "Upcoming"
+                    final nextEvent = activeEvents.first;
+                    final upcomingEvents = activeEvents.length > 1
+                        ? activeEvents.sublist(1)
+                        : <Event>[];
+
+                    return SliverList(
+                      delegate: SliverChildListDelegate([
+                        // Next Event Section
+                        _buildNextEventSection(context, nextEvent),
+
+                        // Upcoming Events Section
+                        _buildUpcomingEventsHeader(context),
+                        ...upcomingEvents.map((event) => Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
+                          child: EventCard(
+                            event: event,
+                            onTap: () => context.push('${AppRoutes.events}/details', extra: event),
+                          ),
+                        ).animate().fadeIn().slideY(begin: 0.1)),
+
+                        SizedBox(height: 100.h),
+                      ]),
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -149,6 +182,64 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     );
   }
 
+  // --- WIDGETS ---
+
+  Widget _buildNextEventSection(BuildContext context, Event event) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Your Next Event',
+            style: TextStyle(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          SizedBox(height: 12.h),
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16.r),
+              border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 1),
+              color: AppColors.primary.withOpacity(0.05),
+            ),
+            child: EventCard(
+              event: event,
+              onTap: () => context.push('${AppRoutes.events}/details', extra: event),
+            ),
+          ),
+          SizedBox(height: 24.h),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUpcomingEventsHeader(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24.w),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Explore Events',
+            style: TextStyle(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          TextButton(
+            onPressed: () => context.push(AppRoutes.events),
+            child: Text('See All', style: TextStyle(fontSize: 14.sp)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Header and QuickAccess widgets remain unchanged...
   Widget _buildHeader(BuildContext context, User? user) {
     return Container(
       width: double.infinity,
@@ -190,7 +281,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    // Live Name Update
                     Text(
                       user?.name ?? 'Student',
                       style: TextStyle(
@@ -234,7 +324,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         children: [
-          // 1. Registered (Live Stream)
           StreamBuilder<List<String>>(
             stream: registeredStream,
             initialData: const [],
@@ -250,8 +339,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             },
           ),
           SizedBox(width: 12.w),
-
-          // 2. Certificates
           _QuickAccessCard(
             label: 'Certificates',
             count: _certificateCount.toString().padLeft(2, '0'),
@@ -260,8 +347,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             onTap: () => context.push(AppRoutes.certificates),
           ),
           SizedBox(width: 12.w),
-
-          // 3. Favorites (Live Stream)
           StreamBuilder<List<String>>(
             stream: favoriteStream,
             initialData: const [],
@@ -277,8 +362,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             },
           ),
           SizedBox(width: 12.w),
-
-          // 4. Feedback
           _QuickAccessCard(
             label: 'Feedback',
             count: _feedbackCount.toString().padLeft(2, '0'),
@@ -288,108 +371,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildNextEventSection(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 24.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Your Next Event',
-            style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          SizedBox(height: 12.h),
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16.r),
-              border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 1),
-              color: AppColors.primary.withOpacity(0.05),
-            ),
-            child: StreamBuilder<List<Event>>(
-              stream: _highlightEventsStream,
-              builder: (context, snapshot) {
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Padding(
-                    padding: EdgeInsets.all(16.w),
-                    child: const Text("You haven't registered for any upcoming events."),
-                  );
-                }
-                return EventCard(
-                  event: snapshot.data!.first,
-                  onTap: () => context.push('${AppRoutes.events}/details', extra: snapshot.data!.first),
-                );
-              },
-            ),
-          ),
-          SizedBox(height: 24.h),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUpcomingEventsSection(BuildContext context) {
-    return SliverList(
-      delegate: SliverChildListDelegate([
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 24.w),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Explore Events',
-                style: TextStyle(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              TextButton(
-                onPressed: () => context.push(AppRoutes.events),
-                child: Text('See All', style: TextStyle(fontSize: 14.sp)),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: 8.h),
-        StreamBuilder<List<Event>>(
-          stream: _upcomingEventsStream,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Center(child: Text('No events found.'));
-            }
-
-            final events = snapshot.data!.length > 1 ? snapshot.data!.sublist(1) : <Event>[];
-
-            if (events.isEmpty) {
-              return Padding(
-                padding: EdgeInsets.all(24.w),
-                child: const Center(child: Text("Check back later for more events!")),
-              );
-            }
-
-            return Column(
-              children: events.map((event) {
-                return Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
-                  child: EventCard(
-                    event: event,
-                    onTap: () => context.push('${AppRoutes.events}/details', extra: event),
-                  ),
-                ).animate().fadeIn().slideY(begin: 0.1);
-              }).toList(),
-            );
-          },
-        ),
-      ]),
     );
   }
 }
