@@ -1,3 +1,4 @@
+import 'package:fusion_fiesta/data/repositories/gallery_repository_impl.dart';
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -57,7 +58,7 @@ Future<void> configureDependencies() async {
   );
 
   serviceLocator.registerLazySingleton<GalleryRepository>(
-        () => MockGalleryRepository(),
+        () => GalleryRepositoryImpl(supabaseClient),
   );
   // ---------------------------------------------------------------------------
 

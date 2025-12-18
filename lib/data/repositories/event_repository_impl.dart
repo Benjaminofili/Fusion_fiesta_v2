@@ -253,22 +253,28 @@ class EventRepositoryImpl implements EventRepository {
     }
   }
 
+
+  Future<String> getOrganizerName(String userId) async {
+    try {
+      final data = await _supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', userId)
+          .single();
+      return data['name'] as String? ?? 'Unknown Organizer';
+    } catch (e) {
+      return 'Unknown (ID: ${_shortenId(userId)})';
+    }
+  }
+
   // --- MAPPERS ---
 
   Event _mapToEvent(Map<String, dynamic> data) {
-    // 1. Try to find the joined profile name
     String organizerName = 'Unknown Organizer';
 
-    // Logic: Check if 'profiles' is in the data (it comes from the join)
-    // ✅ CHANGED: 'full_name' -> 'name'
     if (data['profiles'] != null && data['profiles']['name'] != null) {
       organizerName = data['profiles']['name'];
-    }
-
-    // Fallback: If no join (like in the Stream), check if you have a separate column or just use ID
-    else if (data['organizer_id'] != null) {
-      // Optional: You could keep the ID here if you want, or show "Loading..."
-      // For now, let's just default to the ID if name isn't found
+    } else if (data['organizer_id'] != null) {
       organizerName = _shortenId(data['organizer_id']);
     }
 
@@ -280,7 +286,8 @@ class EventRepositoryImpl implements EventRepository {
       startTime: DateTime.parse(data['start_time']),
       endTime: DateTime.parse(data['end_time']),
       location: data['location'] ?? 'TBD',
-      organizer: organizerName, // <--- NOW USES THE REAL NAME
+      organizer: organizerName,
+      organizerId: data['organizer_id'] ?? '', // <--- MAPPING THE ID
       bannerUrl: data['banner_url'],
       guidelinesUrl: data['guidelines_url'],
       registrationLimit: data['registration_limit'],
@@ -297,6 +304,7 @@ class EventRepositoryImpl implements EventRepository {
     if (id.length > 8) return '${id.substring(0, 8)}...';
     return id;
   }
+
 
   Map<String, dynamic> _mapToEventJson(Event event) {
     return {

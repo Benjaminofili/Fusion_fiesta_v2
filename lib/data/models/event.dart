@@ -13,6 +13,7 @@ class Event extends Equatable {
     required this.endTime,
     required this.location,
     required this.organizer,
+    required this.organizerId,
     this.bannerUrl,
     this.guidelinesUrl,
     this.registrationLimit,
@@ -29,6 +30,7 @@ class Event extends Equatable {
   final DateTime endTime;
   final String location;
   final String organizer;
+  final String organizerId;
   final String? bannerUrl;
   final String? guidelinesUrl;
   final int? registrationLimit;
@@ -47,6 +49,7 @@ class Event extends Equatable {
     DateTime? endTime,
     String? location,
     String? organizer,
+    String? organizerId,
     String? bannerUrl,
     String? guidelinesUrl,
     int? registrationLimit,
@@ -63,6 +66,7 @@ class Event extends Equatable {
       endTime: endTime ?? this.endTime,
       location: location ?? this.location,
       organizer: organizer ?? this.organizer,
+      organizerId: organizerId ?? this.organizerId,
       bannerUrl: bannerUrl ?? this.bannerUrl,
       guidelinesUrl: guidelinesUrl ?? this.guidelinesUrl,
       registrationLimit: registrationLimit ?? this.registrationLimit,
@@ -82,6 +86,7 @@ class Event extends Equatable {
     endTime,
     location,
     organizer,
+    organizerId,
     bannerUrl,
     guidelinesUrl,
     registrationLimit,

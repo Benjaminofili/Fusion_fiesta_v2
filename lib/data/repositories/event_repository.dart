@@ -36,4 +36,6 @@ abstract class EventRepository {
 // --- CERTIFICATES ---
   Future<void> generateCertificatesForEvent(String eventId, String fileUrl);
   Future<List<Certificate>> getUserCertificates(String userId);
+
+  Future<String>? getOrganizerName(String organizerId);
 }

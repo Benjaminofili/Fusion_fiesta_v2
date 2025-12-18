@@ -22,7 +22,9 @@ class _OrganizerEventsScreenState extends State<OrganizerEventsScreen> with Sing
   final _auth = serviceLocator<AuthService>();
 
   late TabController _tabController;
-  String? _organizerName;
+
+  // Cache the ID here to avoid looking it up in the build loop repeatedly
+  String? _currentUserId;
 
   @override
   void initState() {
@@ -32,8 +34,11 @@ class _OrganizerEventsScreenState extends State<OrganizerEventsScreen> with Sing
   }
 
   Future<void> _loadUser() async {
+    // Safely fetch user ID
     final user = await _auth.currentUser;
-    if (mounted) setState(() => _organizerName = user?.name);
+    if (mounted && user != null) {
+      setState(() => _currentUserId = user.id);
+    }
   }
 
   @override
@@ -61,16 +66,17 @@ class _OrganizerEventsScreenState extends State<OrganizerEventsScreen> with Sing
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add),
       ),
-      body: StreamBuilder<List<Event>>(
+      body: _currentUserId == null
+          ? const Center(child: CircularProgressIndicator()) // Wait for user ID
+          : StreamBuilder<List<Event>>(
         stream: _repo.getEventsStream(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-          // Filter for events where the user is Organizer OR Co-Organizer
+          // FILTER LOGIC
           final allEvents = snapshot.data!.where((e) {
-            return e.organizer == _organizerName ||
-                e.organizer == 'Tech Club' || // Keep for mock data visibility
-                e.coOrganizers.contains(_organizerName); // ✅ FIX: Check Co-Organizers
+            return e.organizerId == _currentUserId ||
+                e.coOrganizers.contains(_currentUserId);
           }).toList();
 
           final now = DateTime.now();
@@ -118,7 +124,6 @@ class _EventList extends StatelessWidget {
       itemBuilder: (context, index) {
         final event = events[index];
 
-        // Status Logic
         Color statusColor;
         String statusText;
 
@@ -148,7 +153,6 @@ class _EventList extends StatelessWidget {
             title: Row(
               children: [
                 Expanded(child: Text(event.title, style: const TextStyle(fontWeight: FontWeight.bold))),
-                // Status Badge (Only show on active tab)
                 if (!isHistory)
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),

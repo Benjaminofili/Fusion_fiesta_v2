@@ -104,7 +104,8 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
           final myEvents = snapshot.data!.where((e) {
-            return e.organizer == _currentUser!.name || e.organizer == 'Tech Club';
+            return e.organizerId == _currentUser!.id ||
+                e.coOrganizers.contains(_currentUser!.id);
           }).toList();
 
           int totalRegistrations = 0;

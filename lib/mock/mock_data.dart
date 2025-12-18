@@ -34,6 +34,7 @@ final Map<String, User> mockUserDatabase = {
 
 final Map<String, String> mockPasswords = {
   'student@fusionfiesta.dev': 'password',
-  'organizer@fusionfiesta.dev': 'password',
+  'organizer@fusionfiesta.edu': 'password',
+  'organizer1@fusionfiesta.edu': 'password',
   'admin@fusionfiesta.dev': 'password',
 };

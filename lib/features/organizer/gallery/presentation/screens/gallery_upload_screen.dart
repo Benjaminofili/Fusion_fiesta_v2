@@ -1,4 +1,4 @@
-import 'dart:io'; // <--- 1. ADD THIS IMPORT
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -42,22 +42,23 @@ class _GalleryUploadScreenState extends State<GalleryUploadScreen> {
   }
 
   Future<void> _loadEvents() async {
-    // 1. Get Current User
+    // 1. Get Current User ID
     final user = await _authService.currentUser;
-    final username = user?.name;
+    if (user == null) return;
+
+    final userId = user.id; // <--- USE ID, NOT NAME
 
     // 2. Fetch All Events
+    // Note: In a real app with many events, you might want a specific query
+    // like _eventRepo.getEventsByOrganizer(userId), but filtering the stream works for now.
     final allEvents = await _eventRepo.getEventsStream().first;
 
     if (mounted) {
       setState(() {
-        // 3. FIX: Filter events strictly for this Organizer/Co-organizer
+        // 3. FIX: Filter by ID
         _myEvents = allEvents.where((e) {
-          // Allow 'Tech Club' for demo purposes if needed,
-          // otherwise strictly check names and co-organizer list.
-          return e.organizer == username ||
-              e.organizer == 'Tech Club' ||
-              e.coOrganizers.contains(username);
+          return e.organizerId == userId ||
+              e.coOrganizers.contains(userId);
         }).toList();
       });
     }
@@ -157,7 +158,6 @@ class _GalleryUploadScreenState extends State<GalleryUploadScreen> {
                 SizedBox(height: 12.h),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12.r),
-                  // --- 2. FIX: Use FileImage for local previews ---
                   child: Image.file(
                     File(_filePath!),
                     height: 200.h,
