@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/services/auth_service.dart';
 import '../../../../../data/models/app_notification.dart';
 import '../../../../../data/repositories/notification_repository.dart';
 
@@ -18,12 +19,19 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen>
     with SingleTickerProviderStateMixin {
   final NotificationRepository _repository = serviceLocator<NotificationRepository>();
+  final AuthService _authService = serviceLocator<AuthService>();
   late TabController _tabController;
+
+  // Track IDs hidden from UI but waiting for final deletion
+  final Set<String> _pendingDeletions = {};
+
+  String? _currentUserId;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _currentUserId = _authService.currentUser?.id;
   }
 
   @override
@@ -34,6 +42,10 @@ class _NotificationsScreenState extends State<NotificationsScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (_currentUserId == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
@@ -57,7 +69,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
             icon: const Icon(Icons.done_all, color: AppColors.primary),
             tooltip: 'Mark all as read',
             onPressed: () {
-              _repository.markAllAsRead();
+              _repository.markAllAsRead(_currentUserId!);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('All marked as read')),
               );
@@ -75,16 +87,28 @@ class _NotificationsScreenState extends State<NotificationsScreen>
           ],
         ),
       ),
-      // --- CHANGED: Use StreamBuilder for Real-Time Updates ---
       body: StreamBuilder<List<AppNotification>>(
-        stream: _repository.getNotificationsStream(),
+        stream: _repository.getNotificationsStream(_currentUserId!),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator(color: AppColors.primary));
           }
 
-          final allNotifications = snapshot.data!;
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          // Filter out items that are pending deletion so they disappear immediately
+          final allNotifications = snapshot.data!
+              .where((n) => !_pendingDeletions.contains(n.id))
+              .toList();
+
           final unreadNotifications = allNotifications.where((n) => !n.isRead).toList();
+
+          // Double check if list is empty after filtering
+          if (allNotifications.isEmpty) {
+            return _buildEmptyState();
+          }
 
           return TabBarView(
             controller: _tabController,
@@ -98,19 +122,21 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     );
   }
 
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.notifications_off_outlined, size: 60.sp, color: Colors.grey[300]),
+          SizedBox(height: 16.h),
+          Text('No notifications', style: TextStyle(color: Colors.grey[500], fontSize: 16.sp)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildList(List<AppNotification> items) {
-    if (items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.notifications_off_outlined, size: 60.sp, color: Colors.grey[300]),
-            SizedBox(height: 16.h),
-            Text('No notifications', style: TextStyle(color: Colors.grey[500], fontSize: 16.sp)),
-          ],
-        ),
-      );
-    }
+    if (items.isEmpty) return _buildEmptyState();
 
     return ListView.separated(
       padding: EdgeInsets.all(16.w),
@@ -118,9 +144,57 @@ class _NotificationsScreenState extends State<NotificationsScreen>
       separatorBuilder: (_, __) => SizedBox(height: 12.h),
       itemBuilder: (context, index) {
         final item = items[index];
-        return _NotificationCard(
-          notification: item,
-          onTap: () => _repository.markAsRead(item.id),
+
+        return Dismissible(
+          key: Key(item.id),
+          direction: DismissDirection.endToStart,
+          background: Container(
+            alignment: Alignment.centerRight,
+            padding: EdgeInsets.only(right: 20.w),
+            decoration: BoxDecoration(
+              color: Colors.redAccent,
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Icon(Icons.delete_outline, color: Colors.white, size: 28.sp),
+          ),
+          onDismissed: (direction) {
+            // 1. Optimistic Update: Hide it locally immediately
+            setState(() {
+              _pendingDeletions.add(item.id);
+            });
+
+            // 2. Show SnackBar with Undo
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Notification deleted'),
+                duration: const Duration(seconds: 4),
+                action: SnackBarAction(
+                  label: 'Undo',
+                  onPressed: () {
+                    // 3. UNDO: Un-hide it locally
+                    setState(() {
+                      _pendingDeletions.remove(item.id);
+                    });
+                  },
+                ),
+              ),
+            ).closed.then((reason) {
+              // 4. COMMIT: If SnackBar closed and NOT by clicking Undo...
+              if (reason != SnackBarClosedReason.action) {
+                // ...actually delete from DB
+                _repository.deleteNotification(item.id);
+
+                // Cleanup local set (optional)
+                if (mounted) {
+                  _pendingDeletions.remove(item.id);
+                }
+              }
+            });
+          },
+          child: _NotificationCard(
+            notification: item,
+            onTap: () => _repository.markAsRead(item.id),
+          ),
         );
       },
     );

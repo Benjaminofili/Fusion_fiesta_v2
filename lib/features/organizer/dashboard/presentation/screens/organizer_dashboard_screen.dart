@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_fiesta/core/widgets/notification_badge.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -86,7 +87,9 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.black),
+            icon: const NotificationBadge(
+              child: Icon(Icons.notifications_outlined, color: Colors.white),
+            ),
             onPressed: () => context.push(AppRoutes.notifications),
           ),
         ],

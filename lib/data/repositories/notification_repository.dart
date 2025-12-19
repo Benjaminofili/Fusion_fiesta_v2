@@ -1,8 +1,14 @@
 import '../models/app_notification.dart';
 
 abstract class NotificationRepository {
-  Stream<List<AppNotification>> getNotificationsStream();
-  Future<List<AppNotification>> fetchNotifications();
-  Future<void> markAsRead(String id);
-  Future<void> markAllAsRead();
+  // Ensure this accepts 'userId'
+  Stream<List<AppNotification>> getNotificationsStream(String userId);
+
+  Future<void> markAsRead(String notificationId);
+
+  // Ensure this accepts 'userId'
+  Future<void> markAllAsRead(String userId);
+
+  Future<int> getUnreadCount(String userId);
+  Future<void> deleteNotification(String notificationId);
 }

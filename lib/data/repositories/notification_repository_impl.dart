@@ -27,7 +27,6 @@ class NotificationRepositoryImpl implements NotificationRepository {
           .update({'is_read': true})
           .eq('id', notificationId);
     } catch (e) {
-      // Handle error silently or log it
       print('Error marking notification as read: $e');
     }
   }
@@ -39,13 +38,12 @@ class NotificationRepositoryImpl implements NotificationRepository {
           .from('notifications')
           .update({'is_read': true})
           .eq('user_id', userId)
-          .eq('is_read', false); // Only update unread ones
+          .eq('is_read', false);
     } catch (e) {
       print('Error marking all as read: $e');
     }
   }
 
-  // You might need to add this method to your abstract class first if missing
   @override
   Future<int> getUnreadCount(String userId) async {
     final response = await _supabase
@@ -55,4 +53,17 @@ class NotificationRepositoryImpl implements NotificationRepository {
         .eq('is_read', false);
     return response;
   }
+
+  @override
+  Future<void> deleteNotification(String notificationId) async {
+    try {
+      await _supabase
+          .from('notifications')
+          .delete()
+          .eq('id', notificationId);
+    } catch (e) {
+      print('Error deleting notification: $e');
+    }
+  }
+
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_fiesta/core/widgets/notification_badge.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -27,7 +28,9 @@ class AdminDashboardScreen extends StatelessWidget {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_active_outlined, color: Colors.black),
+            icon: const NotificationBadge(
+              child: Icon(Icons.notifications_outlined, color: Colors.black),
+            ),
             onPressed: () => context.push('/admin/alerts'),
           ),
         ],

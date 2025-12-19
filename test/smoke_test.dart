@@ -7,7 +7,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {
-    await configureDependencies();
+    await setupLocator();
   });
 
   testWidgets('FusionFiestaApp renders', (tester) async {

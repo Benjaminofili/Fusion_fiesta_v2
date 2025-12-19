@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:fusion_fiesta/core/widgets/notification_badge.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../app/di/service_locator.dart';
@@ -301,7 +302,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
-                  icon: Icon(Icons.notifications_outlined, color: Colors.white, size: 24.sp),
+                  icon: const NotificationBadge(
+                    child: Icon(Icons.notifications_outlined, color: Colors.white),
+                  ),
+                  iconSize: 24.sp,
                   onPressed: () => context.push(AppRoutes.notifications),
                 ),
               ),
