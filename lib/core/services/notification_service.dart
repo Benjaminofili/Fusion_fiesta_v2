@@ -7,7 +7,7 @@ import '../../data/models/app_notification.dart';
 
 class NotificationService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
-  FlutterLocalNotificationsPlugin();
+      FlutterLocalNotificationsPlugin();
 
   final Set<String> _notifiedIds = {};
   StreamSubscription? _subscription;
@@ -16,7 +16,8 @@ class NotificationService {
   List<AppNotification> get notifications => List.unmodifiable(_notifications);
 
   Future<void> init() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
 
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -38,9 +39,9 @@ class NotificationService {
   // Call this method after the app has mounted or just fire-and-forget in main
   Future<void> requestPermissions() async {
     if (Platform.isAndroid) {
-      final androidImplementation = _notificationsPlugin
-          .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final androidImplementation =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
 
       await androidImplementation?.requestNotificationsPermission();
     }
@@ -56,7 +57,8 @@ class NotificationService {
         final notificationUtc = n.createdAt.toUtc();
 
         // Use .abs() to handle slight clock skews
-        final differenceInMinutes = nowUtc.difference(notificationUtc).inMinutes.abs();
+        final differenceInMinutes =
+            nowUtc.difference(notificationUtc).inMinutes.abs();
 
         // Increased buffer to 10 minutes to be safe
         final isRecent = differenceInMinutes < 10;
@@ -84,7 +86,6 @@ class NotificationService {
     required String body,
     String userId = 'local_user',
   }) async {
-
     // 1. Add to internal list
     final appNotif = AppNotification(
       id: Random().nextInt(10000).toString(),

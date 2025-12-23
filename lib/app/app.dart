@@ -31,4 +31,3 @@ class _FusionFiestaAppState extends State<FusionFiestaApp> {
     );
   }
 }
-

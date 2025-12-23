@@ -29,4 +29,3 @@ class FaqScreen extends StatelessWidget {
     );
   }
 }
-

@@ -38,7 +38,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _loadUser() async {
-    final user = await _authService.currentUser;
+    final user = _authService.currentUser;
     if (user != null) {
       setState(() {
         _currentUser = user;
@@ -64,43 +64,52 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     setState(() => _isLoading = true);
 
+    // ✅ Capture context-dependent objects BEFORE async gap
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+
     try {
       File? imageFile;
 
-      // Check if the path is a local file (user picked a new photo)
-      // If it starts with 'http', it's the existing URL, so we don't re-upload.
       if (_profilePicPath != null && !_profilePicPath!.startsWith('http')) {
         imageFile = File(_profilePicPath!);
       }
 
-      // Create the updated user object
-      // Note: We DO NOT set profilePictureUrl here if it's a local file.
-      // The repository will handle uploading the file and updating the URL.
       final updatedUser = _currentUser!.copyWith(
         name: _nameController.text.trim(),
         mobileNumber: _mobileController.text.trim(),
         department: _deptController.text.trim(),
       );
 
-      // 1. Update Backend (Pass the image file if it exists)
+      // 1. Update Backend
       final finalUser = await _userRepository.updateUser(
-          updatedUser,
-          newProfileImage: imageFile
+        updatedUser,
+        newProfileImage: imageFile,
       );
 
-      // 2. Update Local Session with the result from backend
+      // 2. Update Local Session
       await _authService.updateUserSession(finalUser);
 
+      // ✅ Use captured references instead of context
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully!'), backgroundColor: AppColors.success),
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated successfully!'),
+            backgroundColor: AppColors.success,
+          ),
         );
-        context.pop();
+        router.pop();
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Update failed: $e'), backgroundColor: AppColors.error),
-      );
+      // ✅ Added mounted check + use captured reference
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Update failed: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -109,11 +118,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_currentUser == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_currentUser == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Edit Profile', style: TextStyle(color: AppColors.textPrimary)),
+        title: const Text('Edit Profile',
+            style: TextStyle(color: AppColors.textPrimary)),
         backgroundColor: Colors.white,
         elevation: 0,
         leading: const BackButton(color: AppColors.textPrimary),
@@ -121,8 +133,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           TextButton(
             onPressed: _isLoading ? null : _saveProfile,
             child: _isLoading
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Save', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Text('Save',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           )
         ],
       ),
@@ -138,11 +155,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   children: [
                     CircleAvatar(
                       radius: 50,
-                      backgroundColor: AppColors.primary.withOpacity(0.1),
+                      backgroundColor: AppColors.primary.withValues(alpha:0.1),
                       // Display Network image (if URL) or File Image (if local path)
                       backgroundImage: _getProfileImageProvider(),
                       child: _profilePicPath == null
-                          ? const Icon(Icons.person, size: 50, color: AppColors.primary)
+                          ? const Icon(Icons.person,
+                              size: 50, color: AppColors.primary)
                           : null,
                     ),
                     Positioned(
@@ -151,11 +169,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       child: UploadPicker(
                         label: 'Edit',
                         allowedExtensions: const ['jpg', 'png', 'jpeg'],
-                        onFileSelected: (file) => setState(() => _profilePicPath = file.path),
+                        onFileSelected: (file) =>
+                            setState(() => _profilePicPath = file.path),
                         customChild: Container(
                           padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-                          child: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                          decoration: const BoxDecoration(
+                              color: AppColors.primary, shape: BoxShape.circle),
+                          child: const Icon(Icons.camera_alt,
+                              color: Colors.white, size: 18),
                         ),
                       ),
                     ),
@@ -175,20 +196,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               TextFormField(
                 controller: _mobileController,
                 keyboardType: TextInputType.phone,
-                decoration: _inputDecoration('Mobile Number', Icons.phone_android),
+                decoration:
+                    _inputDecoration('Mobile Number', Icons.phone_android),
               ),
               const SizedBox(height: 16),
 
               TextFormField(
                 controller: _deptController,
-                decoration: _inputDecoration('Department', Icons.school_outlined),
+                decoration:
+                    _inputDecoration('Department', Icons.school_outlined),
               ),
               const SizedBox(height: 16),
 
               TextFormField(
                 initialValue: _currentUser!.email,
                 readOnly: true,
-                decoration: _inputDecoration('Email', Icons.email_outlined).copyWith(
+                decoration:
+                    _inputDecoration('Email', Icons.email_outlined).copyWith(
                   filled: true,
                   fillColor: Colors.grey[100],
                 ),

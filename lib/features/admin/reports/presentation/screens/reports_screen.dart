@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
-import '../../../../../data/models/event.dart';
-import '../../../../../data/models/user.dart';
 import '../../../../../data/repositories/event_repository.dart';
 import '../../../../../data/repositories/user_repository.dart';
 
@@ -24,7 +21,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   // Statistics
   int _totalEvents = 0;
-  int _activeUsers = 0;
   double _participationRate = 0.0;
   int _certificatesIssued = 0;
   double _avgFeedback = 0.0;
@@ -47,7 +43,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
       // 2. Calculate Key Metrics
       final totalEvents = events.length;
-      final activeUsers = users.length;
 
       // Participation: Registered / Capacity (where capacity exists)
       int totalCapacity = 0;
@@ -104,9 +99,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       if (mounted) {
         setState(() {
           _totalEvents = totalEvents;
-          _activeUsers = activeUsers;
           _participationRate = participation;
-          _certificatesIssued = completedEventAttendees; // Proxy for certificates
+          _certificatesIssued =
+              completedEventAttendees; // Proxy for certificates
           _avgFeedback = mockFeedback;
           _deptStats = deptCounts;
           _maxDeptEvents = maxEvents;
@@ -127,11 +122,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
           children: [
             const Icon(Icons.check_circle, color: Colors.white),
             SizedBox(width: 12.w),
-            Expanded(child: Text('Report generated: Monthly_Analytics.$format')),
+            Expanded(
+                child: Text('Report generated: Monthly_Analytics.$format')),
           ],
         ),
         backgroundColor: AppColors.success,
-        action: SnackBarAction(label: 'OPEN', textColor: Colors.white, onPressed: () {}),
+        action: SnackBarAction(
+            label: 'OPEN', textColor: Colors.white, onPressed: () {}),
       ),
     );
   }
@@ -143,85 +140,111 @@ class _ReportsScreenState extends State<ReportsScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-        padding: EdgeInsets.all(24.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- 1. KEY METRICS ---
-            Text('System Overview', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
-            SizedBox(height: 16.h),
-            Row(
-              children: [
-                _ReportCard(label: 'Total Events', value: '$_totalEvents', color: Colors.blue, icon: Icons.event),
-                SizedBox(width: 16.w),
-                _ReportCard(label: 'Participation', value: '${_participationRate.toStringAsFixed(1)}%', color: Colors.green, icon: Icons.people),
-              ],
-            ),
-            SizedBox(height: 16.h),
-            Row(
-              children: [
-                _ReportCard(label: 'Certificates', value: '$_certificatesIssued', color: Colors.orange, icon: Icons.workspace_premium),
-                SizedBox(width: 16.w),
-                _ReportCard(label: 'Avg Feedback', value: '$_avgFeedback', color: Colors.purple, icon: Icons.star),
-              ],
-            ),
+              padding: EdgeInsets.all(24.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // --- 1. KEY METRICS ---
+                  Text('System Overview',
+                      style: TextStyle(
+                          fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 16.h),
+                  Row(
+                    children: [
+                      _ReportCard(
+                          label: 'Total Events',
+                          value: '$_totalEvents',
+                          color: Colors.blue,
+                          icon: Icons.event),
+                      SizedBox(width: 16.w),
+                      _ReportCard(
+                          label: 'Participation',
+                          value: '${_participationRate.toStringAsFixed(1)}%',
+                          color: Colors.green,
+                          icon: Icons.people),
+                    ],
+                  ),
+                  SizedBox(height: 16.h),
+                  Row(
+                    children: [
+                      _ReportCard(
+                          label: 'Certificates',
+                          value: '$_certificatesIssued',
+                          color: Colors.orange,
+                          icon: Icons.workspace_premium),
+                      SizedBox(width: 16.w),
+                      _ReportCard(
+                          label: 'Avg Feedback',
+                          value: '$_avgFeedback',
+                          color: Colors.purple,
+                          icon: Icons.star),
+                    ],
+                  ),
 
-            SizedBox(height: 32.h),
+                  SizedBox(height: 32.h),
 
-            // --- 2. DEPARTMENT CHARTS ---
-            Text('Event Distribution', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
-            SizedBox(height: 4.h),
-            Text('Events organized by department', style: TextStyle(fontSize: 12.sp, color: Colors.grey)),
-            SizedBox(height: 16.h),
+                  // --- 2. DEPARTMENT CHARTS ---
+                  Text('Event Distribution',
+                      style: TextStyle(
+                          fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 4.h),
+                  Text('Events organized by department',
+                      style: TextStyle(fontSize: 12.sp, color: Colors.grey)),
+                  SizedBox(height: 16.h),
 
-            Container(
-              height: 220.h,
-              padding: EdgeInsets.all(16.w),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
+                  Container(
+                    height: 220.h,
+                    padding: EdgeInsets.all(16.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: _deptStats.isEmpty
+                        ? const Center(child: Text("No data available"))
+                        : Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: _deptStats.entries.map((entry) {
+                              final pct = entry.value / _maxDeptEvents;
+                              // Pick a color based on hash or random
+                              final color = Colors.primaries[
+                                  entry.key.length % Colors.primaries.length];
+                              return _BarChartColumn(
+                                label: entry.key.length > 8
+                                    ? '${entry.key.substring(0, 6)}..'
+                                    : entry.key,
+                                count: entry.value,
+                                heightPct: pct,
+                                color: color,
+                              );
+                            }).toList(),
+                          ),
+                  ),
+
+                  SizedBox(height: 32.h),
+
+                  // --- 3. EXPORT ACTIONS ---
+                  Text('Export Reports',
+                      style: TextStyle(
+                          fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 16.h),
+
+                  _ExportButton(
+                    icon: Icons.picture_as_pdf,
+                    label: 'Download Executive Summary (PDF)',
+                    onTap: () => _generateReport('pdf'),
+                  ),
+                  SizedBox(height: 12.h),
+                  _ExportButton(
+                    icon: Icons.table_chart,
+                    label: 'Export Raw Data (Excel)',
+                    onTap: () => _generateReport('xlsx'),
+                  ),
+                  SizedBox(height: 80.h),
+                ],
               ),
-              child: _deptStats.isEmpty
-                  ? const Center(child: Text("No data available"))
-                  : Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: _deptStats.entries.map((entry) {
-                  final pct = entry.value / _maxDeptEvents;
-                  // Pick a color based on hash or random
-                  final color = Colors.primaries[entry.key.length % Colors.primaries.length];
-                  return _BarChartColumn(
-                    label: entry.key.length > 8 ? '${entry.key.substring(0,6)}..' : entry.key,
-                    count: entry.value,
-                    heightPct: pct,
-                    color: color,
-                  );
-                }).toList(),
-              ),
             ),
-
-            SizedBox(height: 32.h),
-
-            // --- 3. EXPORT ACTIONS ---
-            Text('Export Reports', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
-            SizedBox(height: 16.h),
-
-            _ExportButton(
-              icon: Icons.picture_as_pdf,
-              label: 'Download Executive Summary (PDF)',
-              onTap: () => _generateReport('pdf'),
-            ),
-            SizedBox(height: 12.h),
-            _ExportButton(
-              icon: Icons.table_chart,
-              label: 'Export Raw Data (Excel)',
-              onTap: () => _generateReport('xlsx'),
-            ),
-            SizedBox(height: 80.h),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -234,7 +257,11 @@ class _ReportCard extends StatelessWidget {
   final Color color;
   final IconData icon;
 
-  const _ReportCard({required this.label, required this.value, required this.color, required this.icon});
+  const _ReportCard(
+      {required this.label,
+      required this.value,
+      required this.color,
+      required this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -242,9 +269,9 @@ class _ReportCard extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.05),
+          color: color.withValues(alpha:0.05),
           borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha:0.2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,8 +285,13 @@ class _ReportCard extends StatelessWidget {
               ],
             ),
             SizedBox(height: 12.h),
-            Text(value, style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            Text(label, style: TextStyle(fontSize: 12.sp, color: Colors.grey[700])),
+            Text(value,
+                style: TextStyle(
+                    fontSize: 22.sp,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary)),
+            Text(label,
+                style: TextStyle(fontSize: 12.sp, color: Colors.grey[700])),
           ],
         ),
       ),
@@ -273,21 +305,28 @@ class _BarChartColumn extends StatelessWidget {
   final double heightPct;
   final Color color;
 
-  const _BarChartColumn({required this.label, required this.count, required this.heightPct, required this.color});
+  const _BarChartColumn(
+      {required this.label,
+      required this.count,
+      required this.heightPct,
+      required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        Text('$count', style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.bold, color: color)),
+        Text('$count',
+            style: TextStyle(
+                fontSize: 10.sp, fontWeight: FontWeight.bold, color: color)),
         SizedBox(height: 4.h),
         // The Bar
         Container(
           width: 24.w,
-          height: 120.h * (heightPct < 0.1 ? 0.1 : heightPct), // Min height for visibility
+          height: 120.h *
+              (heightPct < 0.1 ? 0.1 : heightPct), // Min height for visibility
           decoration: BoxDecoration(
-            color: color.withOpacity(0.8),
+            color: color.withValues(alpha:0.8),
             borderRadius: BorderRadius.vertical(top: Radius.circular(6.r)),
           ),
         ),
@@ -295,13 +334,11 @@ class _BarChartColumn extends StatelessWidget {
         // The Label
         SizedBox(
           width: 40.w,
-          child: Text(
-              label,
+          child: Text(label,
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 10.sp, color: Colors.grey[600]),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis
-          ),
+              overflow: TextOverflow.ellipsis),
         ),
       ],
     );
@@ -313,7 +350,8 @@ class _ExportButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _ExportButton({required this.icon, required this.label, required this.onTap});
+  const _ExportButton(
+      {required this.icon, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -331,8 +369,11 @@ class _ExportButton extends StatelessWidget {
           children: [
             Icon(icon, color: AppColors.textSecondary),
             SizedBox(width: 16.w),
-            Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600))),
-            const Icon(Icons.download_rounded, color: AppColors.primary, size: 20),
+            Expanded(
+                child: Text(label,
+                    style: const TextStyle(fontWeight: FontWeight.w600))),
+            const Icon(Icons.download_rounded,
+                color: AppColors.primary, size: 20),
           ],
         ),
       ),

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import 'package:uuid/uuid.dart';
 import '../../core/errors/app_failure.dart';
@@ -24,6 +25,7 @@ class GalleryRepositoryImpl implements GalleryRepository {
     try {
       // 1. If the URL is a local file path, upload it to Storage first
       String finalUrl = item.url;
+      String? storedPath;
       final file = File(item.url);
 
       if (file.existsSync()) {
@@ -33,19 +35,24 @@ class GalleryRepositoryImpl implements GalleryRepository {
 
         // Upload to 'gallery_images' bucket
         await _supabase.storage.from('gallery_images').upload(
-          filePath,
-          file,
-          fileOptions: const supabase.FileOptions(upsert: false),
-        );
+              filePath,
+              file,
+              fileOptions: const supabase.FileOptions(upsert: false),
+            );
 
         // Get the public URL
-        finalUrl = _supabase.storage.from('gallery_images').getPublicUrl(filePath);
+        finalUrl =
+            _supabase.storage.from('gallery_images').getPublicUrl(filePath);
+        storedPath = filePath;
       }
 
       // 2. Insert metadata into Database
       final itemToInsert = item.copyWith(url: finalUrl); // Use the web URL
-      await _supabase.from('gallery_items').insert(itemToInsert.toJson());
-
+      final json = itemToInsert.toJson();
+      if (storedPath != null) {
+        json['file_path'] = storedPath;
+      }
+      await _supabase.from('gallery_items').insert(json);
     } catch (e) {
       throw AppFailure('Failed to upload media: $e');
     }
@@ -78,7 +85,11 @@ class GalleryRepositoryImpl implements GalleryRepository {
           .maybeSingle();
 
       if (exists != null) {
-        await _supabase.from('gallery_favorites').delete().eq('user_id', userId).eq('item_id', itemId);
+        await _supabase
+            .from('gallery_favorites')
+            .delete()
+            .eq('user_id', userId)
+            .eq('item_id', itemId);
       } else {
         await _supabase.from('gallery_favorites').insert({
           'user_id': userId,
@@ -87,7 +98,7 @@ class GalleryRepositoryImpl implements GalleryRepository {
       }
     } catch (e) {
       // Fail silently for UI toggles usually
-      print('Toggle failed: $e');
+      debugPrint('Toggle failed: $e');
     }
   }
 

@@ -1,4 +1,5 @@
 enum AlertType { security, content, technical }
+
 enum AlertSeverity { high, medium, low }
 
 class SystemAlert {

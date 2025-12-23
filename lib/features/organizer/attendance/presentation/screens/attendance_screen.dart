@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../app/di/service_locator.dart';
@@ -40,17 +39,18 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       }
 
       final scannedEventId = parts[1];
-      final userId = parts[2]; // Now correctly captures the full UUID or 'student-1'
+      final userId =
+          parts[2]; // Now correctly captures the full UUID or 'student-1'
 
       if (scannedEventId != widget.event.id) {
-        _showResultDialog(false, "Wrong Event", "This ticket is for a different event.");
+        _showResultDialog(
+            false, "Wrong Event", "This ticket is for a different event.");
         return;
       }
 
       await _repository.markAttendance(widget.event.id, userId);
       _showResultDialog(true, "Check-in Successful", "Student ID: $userId");
       _lastScannedCode = rawData;
-
     } catch (e) {
       _showResultDialog(false, "Error", e.toString());
     } finally {
@@ -63,7 +63,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => Container(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -75,9 +76,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               size: 60,
             ),
             SizedBox(height: 16.h),
-            Text(title, style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+            Text(title,
+                style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
             SizedBox(height: 8.h),
-            Text(msg, textAlign: TextAlign.center, style: TextStyle(color: Colors.grey[600])),
+            Text(msg,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600])),
             SizedBox(height: 24.h),
             SizedBox(
               width: double.infinity,
@@ -85,10 +89,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 onPressed: () {
                   Navigator.pop(context);
                   // Allow scanning again after closing dialog
-                  if(!success) _lastScannedCode = null;
+                  if (!success) _lastScannedCode = null;
                 },
                 style: FilledButton.styleFrom(
-                  backgroundColor: success ? AppColors.success : AppColors.error,
+                  backgroundColor:
+                      success ? AppColors.success : AppColors.error,
                 ),
                 child: const Text('Scan Next'),
               ),
@@ -102,7 +107,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Scan Tickets'), backgroundColor: Colors.transparent),
+      appBar: AppBar(
+          title: const Text('Scan Tickets'),
+          backgroundColor: Colors.transparent),
       extendBodyBehindAppBar: true,
       body: Stack(
         children: [
@@ -122,7 +129,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           // Overlay
           Container(
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.5),
+              color: Colors.black.withValues(alpha:0.5),
             ),
             child: Center(
               child: Container(
@@ -131,7 +138,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 decoration: BoxDecoration(
                   border: Border.all(color: AppColors.primary, width: 2),
                   borderRadius: BorderRadius.circular(20),
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha:0.1),
                 ),
               ),
             ),
@@ -144,7 +151,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             child: Text(
               "Align QR code within the frame",
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w500),
             ),
           ),
         ],

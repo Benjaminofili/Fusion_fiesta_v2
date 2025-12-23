@@ -7,4 +7,3 @@ class AppAssets {
   static const String onboardingIllustration =
       'assets/animations/onboarding.json';
 }
-

@@ -34,16 +34,15 @@ class _CertificatesScreenState extends State<CertificatesScreen> {
   }
 
   Future<void> _loadData() async {
-    // Get current user ID
-    final user = await serviceLocator<AuthService>().currentUser;
+    final user = serviceLocator<AuthService>().currentUser;
     if (user == null) return;
 
     try {
-      // 1. Fetch Events (for metadata like Title)
+      // 1. Load events (for titles/categories)
       final events = await _eventRepository.getEventsStream().first;
       final eventMap = {for (var e in events) e.id: e};
 
-      // 2. FIX: Fetch Real Certificates from Repository
+      // 2. Load user certificates
       final certs = await _eventRepository.getUserCertificates(user.id);
 
       if (mounted) {
@@ -58,52 +57,63 @@ class _CertificatesScreenState extends State<CertificatesScreen> {
     }
   }
 
+  /// Handles Pay → Download flow safely (no context across async gaps)
   Future<void> _handleAction(Certificate cert) async {
-    if (cert.isPaid) {
-      // Logic for Download
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Downloading ${cert.id}.pdf...'), backgroundColor: AppColors.success),
-      );
-    } else {
-      // Logic for Payment
-      final success = await context.push<bool>(
-          '${AppRoutes.certificates}/pay',
-          extra: {'amount': cert.fee, 'itemName': 'Certificate Fee: ${cert.id}'}
-      );
+    // Capture everything we need BEFORE any await
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
 
-      if (success == true) {
-        // Update local state to show as paid
-        setState(() {
-          final index = _certificates.indexWhere((c) => c.id == cert.id);
-          if (index != -1) {
-            _certificates[index] = cert.copyWith(isPaid: true);
-          }
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Payment Successful! Certificate Unlocked.')),
-          );
-        }
-      }
+    if (cert.isPaid) {
+      // Already paid → simulate download
+      _showDownloadFeedback(scaffoldMessenger);
+      return;
+    }
+
+    // Not paid → go to payment screen
+    final success = await router.push<bool>(
+      '${AppRoutes.certificates}/pay',
+      extra: {
+        'amount': cert.fee,
+        'itemName': 'Certificate Fee: ${cert.id}',
+      },
+    );
+
+    // Payment result
+    if (!mounted) return;
+    if (success == true) {
+      setState(() {
+        final i = _certificates.indexWhere((c) => c.id == cert.id);
+        if (i != -1) _certificates[i] = cert.copyWith(isPaid: true);
+      });
+
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('Payment Successful! Certificate Unlocked.'),
+          backgroundColor: AppColors.success,
+        ),
+      );
     }
   }
 
-  Future<void> _downloadCertificate(Certificate cert) async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Downloading ${cert.id}.pdf...'),
-        duration: const Duration(seconds: 1),
+  /// Reusable download simulation (no context needed after capture)
+  void _showDownloadFeedback(ScaffoldMessengerState scaffoldMessenger) {
+    scaffoldMessenger.showSnackBar(
+      const SnackBar(
+        content: Text('Downloading certificate...'),
+        backgroundColor: AppColors.success,
       ),
     );
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+
+    // Simulate async download
+    Future.delayed(const Duration(seconds: 2), () {
+      if (!mounted) return;
+      scaffoldMessenger.showSnackBar(
         const SnackBar(
           content: Text('Download Complete! Saved to Downloads.'),
           backgroundColor: AppColors.success,
         ),
       );
-    }
+    });
   }
 
   @override
@@ -115,7 +125,8 @@ class _CertificatesScreenState extends State<CertificatesScreen> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back_ios_new,
+              color: AppColors.textPrimary),
           onPressed: () => context.pop(),
         ),
         title: Text(
@@ -128,7 +139,8 @@ class _CertificatesScreenState extends State<CertificatesScreen> {
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(
+          child: CircularProgressIndicator(color: AppColors.primary))
           : _certificates.isEmpty
           ? _buildEmptyState()
           : ListView.builder(
@@ -136,8 +148,6 @@ class _CertificatesScreenState extends State<CertificatesScreen> {
         itemCount: _certificates.length,
         itemBuilder: (context, index) {
           final cert = _certificates[index];
-          // Look up the event to get Title/Category.
-          // Fallback to "Unknown Event" if not found.
           final event = _relatedEvents[cert.eventId];
 
           return _CertificateCard(
@@ -145,7 +155,10 @@ class _CertificatesScreenState extends State<CertificatesScreen> {
             eventTitle: event?.title ?? 'Unknown Event',
             eventCategory: event?.category ?? 'General',
             onAction: () => _handleAction(cert),
-          ).animate().fadeIn(delay: (100 * index).ms).slideX(begin: 0.1);
+          )
+              .animate()
+              .fadeIn(delay: (100 * index).ms)
+              .slideX(begin: 0.1);
         },
       ),
     );
@@ -156,7 +169,8 @@ class _CertificatesScreenState extends State<CertificatesScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(FontAwesomeIcons.fileCircleXmark, size: 60.sp, color: Colors.grey[300]),
+          Icon(FontAwesomeIcons.fileCircleXmark,
+              size: 60.sp, color: Colors.grey[300]),
           SizedBox(height: 16.h),
           Text(
             'No certificates earned yet',
@@ -197,7 +211,9 @@ class _CertificateCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha:0.05), blurRadius: 10)
+        ],
       ),
       child: Row(
         children: [
@@ -206,7 +222,7 @@ class _CertificateCard extends StatelessWidget {
             width: 60.w,
             height: 60.w,
             decoration: BoxDecoration(
-              color: isLocked ? Colors.grey[100] : Colors.blue.withOpacity(0.1),
+              color: isLocked ? Colors.grey[100] : Colors.blue.withValues(alpha:0.1),
               borderRadius: BorderRadius.circular(12.r),
             ),
             child: Center(
@@ -223,11 +239,16 @@ class _CertificateCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(eventTitle, style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                Text(eventTitle,
+                    style: TextStyle(
+                        fontSize: 16.sp, fontWeight: FontWeight.bold)),
                 if (isLocked)
-                  Text('Payment Pending', style: TextStyle(fontSize: 12.sp, color: Colors.orange))
+                  Text('Payment Pending',
+                      style: TextStyle(fontSize: 12.sp, color: Colors.orange))
                 else
-                  Text('Issued: ${DateFormat('MMM d, yyyy').format(certificate.issuedAt)}', style: TextStyle(fontSize: 12.sp, color: Colors.grey)),
+                  Text(
+                      'Issued: ${DateFormat('MMM d, yyyy').format(certificate.issuedAt)}',
+                      style: TextStyle(fontSize: 12.sp, color: Colors.grey)),
               ],
             ),
           ),
@@ -236,9 +257,11 @@ class _CertificateCard extends StatelessWidget {
           TextButton.icon(
             onPressed: onAction,
             icon: Icon(actionIcon, size: 16, color: actionColor),
-            label: Text(actionLabel, style: TextStyle(color: actionColor, fontWeight: FontWeight.bold)),
+            label: Text(actionLabel,
+                style:
+                    TextStyle(color: actionColor, fontWeight: FontWeight.bold)),
             style: TextButton.styleFrom(
-              backgroundColor: actionColor.withOpacity(0.1),
+              backgroundColor: actionColor.withValues(alpha:0.1),
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
             ),
           ),

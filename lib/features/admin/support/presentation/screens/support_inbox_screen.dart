@@ -37,15 +37,18 @@ class _SupportInboxScreenState extends State<SupportInboxScreen> {
 
   void _openReplyDialog(SupportMessage msg) {
     final replyCtrl = TextEditingController();
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      // 1. RENAME 'context' to 'dialogContext' to prevent shadowing
+      builder: (dialogContext) => AlertDialog(
         title: Text('Reply to ${msg.senderName}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Subject: Re: ${msg.subject}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text('Subject: Re: ${msg.subject}',
+                style: const TextStyle(fontWeight: FontWeight.bold)),
             SizedBox(height: 16.h),
             TextField(
               controller: replyCtrl,
@@ -58,15 +61,31 @@ class _SupportInboxScreenState extends State<SupportInboxScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel')),
           FilledButton(
             onPressed: () async {
-              Navigator.pop(context);
+              // 2. CAPTURE the ScaffodMessenger/Context BEFORE the async gap
+              //    We use 'context' (Screen scope), NOT 'dialogContext'.
+              final messenger = ScaffoldMessenger.of(context);
+
+              // Close the dialog using the dialog's context
+              Navigator.pop(dialogContext);
+
+              // Perform the async operation
               await _repo.replyToMessage(msg.id, replyCtrl.text);
+
+              // 3. CHECK MOUNTED property of the STATE (not context)
+              //    This guards the _loadMessages() call which uses setState.
+              if (!mounted) return;
+
+              // 4. USE CAPTURED MESSENGER
+              //    Using the variable we captured earlier is safe.
+              messenger.showSnackBar(
+                  const SnackBar(content: Text('Response Sent')));
+
               _loadMessages();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Response Sent')));
-              }
             },
             child: const Text('Send'),
           ),
@@ -92,16 +111,23 @@ class _SupportInboxScreenState extends State<SupportInboxScreen> {
           return ListTile(
             contentPadding: EdgeInsets.zero,
             leading: CircleAvatar(
-              backgroundColor: AppColors.primary.withOpacity(0.1),
-              child: Text(msg.senderName[0], style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+              child: Text(msg.senderName[0],
+                  style: const TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold)),
             ),
-            title: Text(msg.subject, style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(msg.subject,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${msg.senderName} <${msg.email}>', style: TextStyle(fontSize: 12.sp, color: Colors.grey[600])),
+                Text('${msg.senderName} <${msg.email}>',
+                    style: TextStyle(
+                        fontSize: 12.sp, color: Colors.grey[600])),
                 SizedBox(height: 4.h),
-                Text(msg.message, maxLines: 2, overflow: TextOverflow.ellipsis),
+                Text(msg.message,
+                    maxLines: 2, overflow: TextOverflow.ellipsis),
               ],
             ),
             trailing: Text(

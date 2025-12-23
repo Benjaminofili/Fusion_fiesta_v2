@@ -83,19 +83,24 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
   Future<void> _saveEvent() async {
     if (!_formKey.currentState!.validate()) return;
     if (_startDate == null || _endDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select start and end times')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select start and end times')));
       return;
     }
 
     setState(() => _isLoading = true);
 
+    // ✅ Capture context-dependent objects BEFORE async gap
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+
     try {
       // 1. Get the current user to save their ID
-      final user = await _authService.currentUser;
+      final user = _authService.currentUser;
       if (user == null) throw Exception("User not logged in");
 
       final organizerName = user.name;
-      final organizerId = user.id; // <--- CRITICAL FIX
+      final organizerId = user.id;
 
       final newEvent = Event(
         id: widget.event?.id ?? const Uuid().v4(),
@@ -106,7 +111,7 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
         endTime: _endDate!,
         location: _locationCtrl.text.trim(),
         organizer: organizerName,
-        organizerId: organizerId, // <--- PASSING THE ID
+        organizerId: organizerId,
         registrationLimit: int.tryParse(_limitCtrl.text),
         bannerUrl: _bannerPath,
         guidelinesUrl: _pdfPath,
@@ -121,38 +126,62 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
         await _repo.updateEvent(newEvent);
       }
 
+      // ✅ Use captured references instead of context
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Event Saved!')));
-        context.pop();
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(content: Text('Event Saved!')),
+        );
+        router.pop();
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      // ✅ Added mounted check + use captured reference
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _pickDateTime(bool isStart) async {
+    // First dialog - no async gap yet, context is safe to use directly
     final date = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime(2030),
     );
+
     if (date == null) return;
 
+    // ✅ Check mounted IMMEDIATELY before using context after async gap
     if (!mounted) return;
+
+    // ✅ Now context is safe to use because mounted check passed
     final time = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
     );
+
     if (time == null) return;
 
-    final dateTime = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    // ✅ Check mounted again before setState
+    if (!mounted) return;
+
+    final dateTime = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+
     setState(() {
       if (isStart) {
         _startDate = dateTime;
-        if (_endDate == null) _endDate = dateTime.add(const Duration(hours: 2));
+        _endDate ??= dateTime.add(const Duration(hours: 2));
       } else {
         _endDate = dateTime;
       }
@@ -176,69 +205,134 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              AppTextField(controller: _titleCtrl, label: 'Event Title', prefixIcon: Icons.title, validator: (v) => v!.isEmpty ? 'Required' : null),
+              AppTextField(
+                  controller: _titleCtrl,
+                  label: 'Event Title',
+                  prefixIcon: Icons.title,
+                  validator: (v) => v!.isEmpty ? 'Required' : null),
               SizedBox(height: 16.h),
               DropdownButtonFormField<String>(
-                value: _selectedCategory,
+                initialValue: _selectedCategory,
                 items: ['Technical', 'Cultural', 'Sports', 'Workshop']
                     .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                     .toList(),
                 onChanged: (v) => setState(() => _selectedCategory = v!),
                 decoration: InputDecoration(
                   labelText: 'Category',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.r)),
                   prefixIcon: const Icon(Icons.category_outlined),
                 ),
               ),
               SizedBox(height: 16.h),
               Row(
                 children: [
-                  Expanded(child: _DateTimePicker(label: 'Starts', value: _startDate, onTap: () => _pickDateTime(true))),
+                  Expanded(
+                      child: _DateTimePicker(
+                          label: 'Starts',
+                          value: _startDate,
+                          onTap: () => _pickDateTime(true))),
                   SizedBox(width: 16.w),
-                  Expanded(child: _DateTimePicker(label: 'Ends', value: _endDate, onTap: () => _pickDateTime(false))),
+                  Expanded(
+                      child: _DateTimePicker(
+                          label: 'Ends',
+                          value: _endDate,
+                          onTap: () => _pickDateTime(false))),
                 ],
               ),
               SizedBox(height: 16.h),
-              AppTextField(controller: _locationCtrl, label: 'Venue / Location', prefixIcon: Icons.location_on_outlined, validator: (v) => v!.isEmpty ? 'Required' : null),
+              AppTextField(
+                  controller: _locationCtrl,
+                  label: 'Venue / Location',
+                  prefixIcon: Icons.location_on_outlined,
+                  validator: (v) => v!.isEmpty ? 'Required' : null),
               SizedBox(height: 16.h),
-              AppTextField(controller: _limitCtrl, label: 'Max Participants', prefixIcon: Icons.people_outline, keyboardType: TextInputType.number),
+              AppTextField(
+                  controller: _limitCtrl,
+                  label: 'Max Participants',
+                  prefixIcon: Icons.people_outline,
+                  keyboardType: TextInputType.number),
               SizedBox(height: 16.h),
               TextFormField(
                 controller: _descCtrl,
                 maxLines: 4,
-                decoration: InputDecoration(labelText: 'Description', alignLabelWithHint: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r))),
+                decoration: InputDecoration(
+                    labelText: 'Description',
+                    alignLabelWithHint: true,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.r))),
                 validator: (v) => v!.isEmpty ? 'Required' : null,
               ),
               SizedBox(height: 24.h),
-              Text('Team Management', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp)),
+              Text('Team Management',
+                  style:
+                      TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp)),
               SizedBox(height: 8.h),
               Row(
                 children: [
-                  Expanded(child: AppTextField(controller: _volunteerCtrl, label: 'Add Co-organizer (Name Only)', prefixIcon: Icons.person_add_alt)),
+                  Expanded(
+                      child: AppTextField(
+                          controller: _volunteerCtrl,
+                          label: 'Add Co-organizer (Name Only)',
+                          prefixIcon: Icons.person_add_alt)),
                   SizedBox(width: 8.w),
-                  IconButton.filled(onPressed: _addVolunteer, icon: const Icon(Icons.add), style: IconButton.styleFrom(backgroundColor: AppColors.primary)),
+                  IconButton.filled(
+                      onPressed: _addVolunteer,
+                      icon: const Icon(Icons.add),
+                      style: IconButton.styleFrom(
+                          backgroundColor: AppColors.primary)),
                 ],
               ),
               SizedBox(height: 8.h),
               Wrap(
                 spacing: 8.w,
-                children: _coOrganizers.map((name) => Chip(label: Text(name), deleteIcon: const Icon(Icons.close, size: 18), onDeleted: () => _removeVolunteer(name), backgroundColor: AppColors.primary.withOpacity(0.1))).toList(),
+                children: _coOrganizers
+                    .map((name) => Chip(
+                        label: Text(name),
+                        deleteIcon: const Icon(Icons.close, size: 18),
+                        onDeleted: () => _removeVolunteer(name),
+                        backgroundColor: AppColors.primary.withValues(alpha:0.1)))
+                    .toList(),
               ),
               SizedBox(height: 24.h),
-              Text('Attachments', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp)),
+              Text('Attachments',
+                  style:
+                      TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp)),
               SizedBox(height: 12.h),
-              UploadPicker(label: _bannerPath != null ? 'Change Banner' : 'Upload Banner', icon: Icons.image, allowedExtensions: const ['jpg', 'png'], onFileSelected: (f) => setState(() => _bannerPath = f.path)),
-              if (_bannerPath != null) ...[SizedBox(height: 8.h), Text('Selected: ${_bannerPath!.split('/').last}', style: const TextStyle(color: Colors.green))],
+              UploadPicker(
+                  label:
+                      _bannerPath != null ? 'Change Banner' : 'Upload Banner',
+                  icon: Icons.image,
+                  allowedExtensions: const ['jpg', 'png'],
+                  onFileSelected: (f) => setState(() => _bannerPath = f.path)),
+              if (_bannerPath != null) ...[
+                SizedBox(height: 8.h),
+                Text('Selected: ${_bannerPath!.split('/').last}',
+                    style: const TextStyle(color: Colors.green))
+              ],
               SizedBox(height: 12.h),
-              UploadPicker(label: _pdfPath != null ? 'Change Guidelines' : 'Upload Guidelines (PDF)', icon: Icons.picture_as_pdf, allowedExtensions: const ['pdf'], onFileSelected: (f) => setState(() => _pdfPath = f.path)),
+              UploadPicker(
+                  label: _pdfPath != null
+                      ? 'Change Guidelines'
+                      : 'Upload Guidelines (PDF)',
+                  icon: Icons.picture_as_pdf,
+                  allowedExtensions: const ['pdf'],
+                  onFileSelected: (f) => setState(() => _pdfPath = f.path)),
               SizedBox(height: 40.h),
               SizedBox(
                 width: double.infinity,
                 height: 56.h,
                 child: FilledButton(
                   onPressed: _isLoading ? null : _saveEvent,
-                  style: FilledButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r))),
-                  child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(isEditing ? 'Update Event' : 'Submit for Approval', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                  style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.r))),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(isEditing ? 'Update Event' : 'Submit for Approval',
+                          style: TextStyle(
+                              fontSize: 16.sp, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -263,13 +357,20 @@ class _DateTimePicker extends StatelessWidget {
       borderRadius: BorderRadius.circular(12.r),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 16.h),
-        decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade400), borderRadius: BorderRadius.circular(12.r)),
+        decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade400),
+            borderRadius: BorderRadius.circular(12.r)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: TextStyle(fontSize: 12.sp, color: Colors.grey[600])),
+            Text(label,
+                style: TextStyle(fontSize: 12.sp, color: Colors.grey[600])),
             SizedBox(height: 4.h),
-            Text(value != null ? DateFormat('MMM d, h:mm a').format(value!) : 'Select...', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
+            Text(
+                value != null
+                    ? DateFormat('MMM d, h:mm a').format(value!)
+                    : 'Select...',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
           ],
         ),
       ),

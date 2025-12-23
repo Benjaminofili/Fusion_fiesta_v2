@@ -43,4 +43,3 @@ class SitemapScreen extends StatelessWidget {
     );
   }
 }
-

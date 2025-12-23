@@ -30,4 +30,3 @@ class Registration extends Equatable {
   @override
   List<Object?> get props => [id, eventId, userId, status, createdAt];
 }
-

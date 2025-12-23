@@ -15,37 +15,26 @@ class UserManagementScreen extends StatefulWidget {
   State<UserManagementScreen> createState() => _UserManagementScreenState();
 }
 
-class _UserManagementScreenState extends State<UserManagementScreen> with SingleTickerProviderStateMixin {
+class _UserManagementScreenState extends State<UserManagementScreen>
+    with SingleTickerProviderStateMixin {
   final _repo = serviceLocator<UserRepository>();
   late TabController _tabController;
-  List<User> _users = [];
-  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadUsers();
-  }
-
-  Future<void> _loadUsers() async {
-    final users = await _repo.fetchUsers();
-    if (mounted) {
-      setState(() {
-        _users = users;
-        _isLoading = false;
-      });
-    }
   }
 
   // --- ACTIONS ---
 
   Future<void> _updateUser(User user) async {
     await _repo.updateUser(user);
-    _loadUsers(); // Refresh list
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('User updated successfully'), backgroundColor: AppColors.success),
+        const SnackBar(
+            content: Text('User updated successfully'),
+            backgroundColor: AppColors.success),
       );
     }
   }
@@ -101,7 +90,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
 
               // 2. PENDING TAB
               _UserList(
-                users: users.where((u) => !u.isApproved && (u.role == AppRole.organizer || u.role == AppRole.admin)).toList(),
+                users: users
+                    .where((u) =>
+                        !u.isApproved &&
+                        (u.role == AppRole.organizer ||
+                            u.role == AppRole.admin))
+                    .toList(),
                 onTap: (user) {
                   _updateUser(user.copyWith(isApproved: true));
                 },
@@ -120,7 +114,8 @@ class _UserList extends StatelessWidget {
   final Function(User) onTap;
   final bool isPendingTab;
 
-  const _UserList({required this.users, required this.onTap, this.isPendingTab = false});
+  const _UserList(
+      {required this.users, required this.onTap, this.isPendingTab = false});
 
   @override
   Widget build(BuildContext context) {
@@ -131,7 +126,8 @@ class _UserList extends StatelessWidget {
           children: [
             Icon(Icons.group_off_outlined, size: 48, color: Colors.grey[300]),
             const SizedBox(height: 16),
-            Text(isPendingTab ? "No pending requests" : "No users found", style: TextStyle(color: Colors.grey[500])),
+            Text(isPendingTab ? "No pending requests" : "No users found",
+                style: TextStyle(color: Colors.grey[500])),
           ],
         ),
       );
@@ -153,13 +149,20 @@ class _UserList extends StatelessWidget {
           ),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: isPendingTab ? Colors.orange[50] : (isActive ? AppColors.primary.withOpacity(0.1) : Colors.red[50]),
+              backgroundColor: isPendingTab
+                  ? Colors.orange[50]
+                  : (isActive
+                      ? AppColors.primary.withValues(alpha:0.1)
+                      : Colors.red[50]),
               child: Icon(
                 Icons.person,
-                color: isPendingTab ? Colors.orange : (isActive ? AppColors.primary : Colors.red),
+                color: isPendingTab
+                    ? Colors.orange
+                    : (isActive ? AppColors.primary : Colors.red),
               ),
             ),
-            title: Text(user.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(user.name,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -171,9 +174,16 @@ class _UserList extends StatelessWidget {
                     if (!isActive && !isPendingTab) ...[
                       SizedBox(width: 8.w),
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                        decoration: BoxDecoration(color: Colors.red[100], borderRadius: BorderRadius.circular(4)),
-                        child: Text('DEACTIVATED', style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.bold, color: Colors.red)),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 6.w, vertical: 2.h),
+                        decoration: BoxDecoration(
+                            color: Colors.red[100],
+                            borderRadius: BorderRadius.circular(4)),
+                        child: Text('DEACTIVATED',
+                            style: TextStyle(
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red)),
                       ),
                     ]
                   ],
@@ -182,11 +192,12 @@ class _UserList extends StatelessWidget {
             ),
             trailing: isPendingTab
                 ? IconButton.filled(
-              icon: const Icon(Icons.check),
-              style: IconButton.styleFrom(backgroundColor: AppColors.success),
-              tooltip: 'Approve Staff',
-              onPressed: () => onTap(user),
-            )
+                    icon: const Icon(Icons.check),
+                    style: IconButton.styleFrom(
+                        backgroundColor: AppColors.success),
+                    tooltip: 'Approve Staff',
+                    onPressed: () => onTap(user),
+                  )
                 : const Icon(Icons.edit, size: 20, color: Colors.grey),
             onTap: isPendingTab ? null : () => onTap(user),
           ),
@@ -203,23 +214,31 @@ class _RoleBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Color color;
-    switch(role) {
-      case AppRole.admin: color = Colors.red; break;
-      case AppRole.organizer: color = Colors.purple; break;
-      case AppRole.student: color = Colors.blue; break;
-      default: color = Colors.grey;
+    switch (role) {
+      case AppRole.admin:
+        color = Colors.red;
+        break;
+      case AppRole.organizer:
+        color = Colors.purple;
+        break;
+      case AppRole.student:
+        color = Colors.blue;
+        break;
+      default:
+        color = Colors.grey;
     }
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha:0.1),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha:0.3)),
       ),
       child: Text(
         role.name.toUpperCase(),
-        style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.bold, color: color),
+        style: TextStyle(
+            fontSize: 10.sp, fontWeight: FontWeight.bold, color: color),
       ),
     );
   }
@@ -250,18 +269,21 @@ class _EditUserDialogState extends State<_EditUserDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Edit User: ${widget.user.name}', style: TextStyle(fontSize: 18.sp)),
+      title: Text('Edit User: ${widget.user.name}',
+          style: TextStyle(fontSize: 18.sp)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // 1. Role Assignment
           DropdownButtonFormField<AppRole>(
-            value: _selectedRole,
+            initialValue: _selectedRole,
             decoration: const InputDecoration(labelText: 'Role'),
-            items: AppRole.values.map((role) => DropdownMenuItem(
-              value: role,
-              child: Text(role.name.toUpperCase()),
-            )).toList(),
+            items: AppRole.values
+                .map((role) => DropdownMenuItem(
+                      value: role,
+                      child: Text(role.name.toUpperCase()),
+                    ))
+                .toList(),
             onChanged: (val) => setState(() => _selectedRole = val!),
           ),
           SizedBox(height: 16.h),
@@ -269,9 +291,10 @@ class _EditUserDialogState extends State<_EditUserDialog> {
           // 2. Account Control (Active/Deactive)
           SwitchListTile(
             title: const Text('Account Active'),
-            subtitle: Text(_isApproved ? 'User can log in' : 'User access revoked'),
+            subtitle:
+                Text(_isApproved ? 'User can log in' : 'User access revoked'),
             value: _isApproved,
-            activeColor: AppColors.success,
+            activeThumbColor: AppColors.success,
             onChanged: (val) => setState(() => _isApproved = val),
           ),
         ],

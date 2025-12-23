@@ -49,8 +49,10 @@ class AdminDashboardScreen extends StatelessWidget {
                     stream: eventRepo.getEventsStream(),
                     builder: (context, snapshot) {
                       final pendingCount = snapshot.data
-                          ?.where((e) => e.approvalStatus == EventStatus.pending)
-                          .length ?? 0;
+                              ?.where((e) =>
+                                  e.approvalStatus == EventStatus.pending)
+                              .length ??
+                          0;
                       return StatTile(
                         label: 'Pending Events',
                         value: pendingCount.toString().padLeft(2, '0'),
@@ -81,7 +83,8 @@ class AdminDashboardScreen extends StatelessWidget {
             SizedBox(height: 32.h),
 
             // --- 2. QUICK ACTIONS ---
-            Text('Quick Actions', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+            Text('Quick Actions',
+                style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
             SizedBox(height: 16.h),
 
             // 2.1 Event Proposals
@@ -162,16 +165,20 @@ class _AdminActionTile extends StatelessWidget {
     return Card(
       elevation: 0,
       color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r), side: BorderSide(color: AppColors.border)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          side: BorderSide(color: AppColors.border)),
       child: ListTile(
         contentPadding: EdgeInsets.all(16.w),
         leading: Container(
           padding: EdgeInsets.all(12.w),
-          decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+          decoration: BoxDecoration(
+              color: color.withValues(alpha:0.1), shape: BoxShape.circle),
           child: Icon(icon, color: color),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle, style: TextStyle(color: Colors.grey[600], fontSize: 12.sp)),
+        subtitle: Text(subtitle,
+            style: TextStyle(color: Colors.grey[600], fontSize: 12.sp)),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: onTap,
       ),

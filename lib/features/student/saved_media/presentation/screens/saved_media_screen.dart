@@ -22,7 +22,8 @@ class _SavedMediaScreenState extends State<SavedMediaScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
-        title: const Text('Saved Memories', style: TextStyle(color: AppColors.textPrimary)),
+        title: const Text('Saved Memories',
+            style: TextStyle(color: AppColors.textPrimary)),
         backgroundColor: Colors.white,
         elevation: 0,
         leading: const BackButton(color: AppColors.textPrimary),
@@ -32,11 +33,13 @@ class _SavedMediaScreenState extends State<SavedMediaScreen> {
         stream: _repository.getGalleryStream(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+            return const Center(
+                child: CircularProgressIndicator(color: AppColors.primary));
           }
 
           // Filter for favorites locally
-          final savedItems = snapshot.data!.where((item) => item.isFavorite).toList();
+          final savedItems =
+              snapshot.data!.where((item) => item.isFavorite).toList();
 
           if (savedItems.isEmpty) {
             return _buildEmptyState();
@@ -55,7 +58,8 @@ class _SavedMediaScreenState extends State<SavedMediaScreen> {
               final item = savedItems[index];
               return _SavedItemCard(
                 item: item,
-                onTap: () => context.push('${AppRoutes.gallery}/view', extra: item),
+                onTap: () =>
+                    context.push('${AppRoutes.gallery}/view', extra: item),
                 onRemove: () => _repository.toggleFavorite(item.id),
               ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1);
             },
@@ -121,7 +125,8 @@ class _SavedItemCard extends StatelessWidget {
             child: Container(
               height: 50,
               decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                borderRadius:
+                    const BorderRadius.vertical(bottom: Radius.circular(12)),
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,

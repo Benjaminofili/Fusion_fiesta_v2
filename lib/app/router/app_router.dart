@@ -209,7 +209,8 @@ class AppRouter {
 
       // --- ADMIN FEATURES (Top Level) ---
       GoRoute(
-        path: AppRoutes.adminDashboard, // Ensure this constant exists in AppRoutes
+        path: AppRoutes
+            .adminDashboard, // Ensure this constant exists in AppRoutes
         builder: (context, state) => const AdminDashboardScreen(),
       ),
       GoRoute(
@@ -250,7 +251,7 @@ class AppRouter {
             path: 'pay',
             builder: (context, state) {
               final extra = state.extra as Map<String, dynamic>;
-              return MockPaymentScreen(
+              return PaymentSimulationScreen(
                 amount: extra['amount'] as double,
                 itemName: extra['itemName'] as String,
               );
@@ -330,10 +331,11 @@ class AppRouter {
     redirect: _resolveRedirect,
   );
 
-  FutureOr<String?> _resolveRedirect(BuildContext context, GoRouterState state) async {
+  FutureOr<String?> _resolveRedirect(
+      BuildContext context, GoRouterState state) async {
     final location = state.uri.path;
 
-    // 1. Public Routes Check
+    // 1. Public Routes Check (Keep as is)
     if (location == AppRoutes.splash ||
         location == AppRoutes.onboarding ||
         location == AppRoutes.register ||
@@ -341,16 +343,16 @@ class AppRouter {
       return null;
     }
 
-    final user = await _authService.currentUser;
+    final user = _authService.currentUser;
     final loggingIn = location == AppRoutes.login;
 
-    // 2. Not Authenticated
+    // 2. Not Authenticated (Keep as is)
     if (user == null) {
       if (!loggingIn) return AppRoutes.login;
       return null;
     }
 
-    // 3. Organizer Approval Check
+    // 3. Organizer Approval Check (Keep as is)
     if (user.role == AppRole.organizer && !user.isApproved) {
       if (location != AppRoutes.verificationPending) {
         return AppRoutes.verificationPending;
@@ -360,18 +362,17 @@ class AppRouter {
 
     // 4. Organizer Approved -> Dashboard Redirect
     if (location == AppRoutes.verificationPending) {
-      // FIX: Send to the Organizer Dashboard, not Main
-      return AppRoutes.organizerDashboard;
+      // FIX: Send to Main. The Shell will load the Organizer Tabs.
+      return AppRoutes.main;
     }
 
     // 5. Already Logged In (Trying to access login)
     if (loggingIn) {
-      if (user.role == AppRole.admin) return AppRoutes.adminDashboard;
-      if (user.role == AppRole.organizer) return AppRoutes.organizerDashboard;
+      // FIX: Always send to Main. The Shell handles the Role switching.
       return AppRoutes.main;
     }
 
-    // 6. Visitor Role Logic
+    // 6. Visitor Role Logic (Keep as is)
     if (user.role == AppRole.visitor) {
       if (!user.profileCompleted && location != AppRoutes.roleUpgrade) {
         return AppRoutes.roleUpgrade;

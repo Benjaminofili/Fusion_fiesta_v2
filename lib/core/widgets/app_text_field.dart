@@ -60,7 +60,8 @@ class _AppTextFieldState extends State<AppTextField> {
       decoration: InputDecoration(
         labelText: widget.label,
         hintText: widget.hint,
-        prefixIcon: Icon(widget.prefixIcon, color: AppColors.textSecondary, size: 20.sp),
+        prefixIcon: Icon(widget.prefixIcon,
+            color: AppColors.textSecondary, size: 20.sp),
         filled: true,
         fillColor: Colors.white,
         contentPadding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 20.w),
@@ -83,17 +84,17 @@ class _AppTextFieldState extends State<AppTextField> {
         // Logic: Only show suffix icon if it's a password field
         suffixIcon: widget.isPassword
             ? IconButton(
-          icon: Icon(
-            _obscureText ? Icons.visibility_off : Icons.visibility,
-            color: AppColors.textSecondary,
-            size: 20.sp,
-          ),
-          onPressed: () {
-            setState(() {
-              _obscureText = !_obscureText;
-            });
-          },
-        )
+                icon: Icon(
+                  _obscureText ? Icons.visibility_off : Icons.visibility,
+                  color: AppColors.textSecondary,
+                  size: 20.sp,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscureText = !_obscureText;
+                  });
+                },
+              )
             : null,
       ),
     );

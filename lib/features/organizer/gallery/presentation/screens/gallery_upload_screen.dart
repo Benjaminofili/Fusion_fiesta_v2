@@ -43,7 +43,7 @@ class _GalleryUploadScreenState extends State<GalleryUploadScreen> {
 
   Future<void> _loadEvents() async {
     // 1. Get Current User ID
-    final user = await _authService.currentUser;
+    final user = _authService.currentUser;
     if (user == null) return;
 
     final userId = user.id; // <--- USE ID, NOT NAME
@@ -57,8 +57,7 @@ class _GalleryUploadScreenState extends State<GalleryUploadScreen> {
       setState(() {
         // 3. FIX: Filter by ID
         _myEvents = allEvents.where((e) {
-          return e.organizerId == userId ||
-              e.coOrganizers.contains(userId);
+          return e.organizerId == userId || e.coOrganizers.contains(userId);
         }).toList();
       });
     }
@@ -67,18 +66,24 @@ class _GalleryUploadScreenState extends State<GalleryUploadScreen> {
   Future<void> _upload() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedEvent == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select an event')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Please select an event')));
       return;
     }
     if (_filePath == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please pick an image')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Please pick an image')));
       return;
     }
 
     setState(() => _isLoading = true);
 
+    // Capture everything you need BEFORE any await
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+
     try {
-      final user = await _authService.currentUser;
+      final user = _authService.currentUser;
 
       final newItem = GalleryItem(
         id: const Uuid().v4(),
@@ -93,19 +98,28 @@ class _GalleryUploadScreenState extends State<GalleryUploadScreen> {
 
       await _galleryRepo.uploadMedia(newItem);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Uploaded successfully!'), backgroundColor: AppColors.success),
-        );
-        context.pop();
-      }
+      // Only use context-dependent objects AFTER checking mounted
+      if (!mounted) return;
+
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('Uploaded successfully!'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      router.pop();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (!mounted) return;
+
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -117,22 +131,26 @@ class _GalleryUploadScreenState extends State<GalleryUploadScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Share memories from your events.', style: TextStyle(color: Colors.grey[600])),
+              Text('Share memories from your events.',
+                  style: TextStyle(color: Colors.grey[600])),
               SizedBox(height: 24.h),
 
               // 1. EVENT SELECTOR
               DropdownButtonFormField<Event>(
-                value: _selectedEvent,
+                initialValue: _selectedEvent,
                 hint: const Text('Select Event'),
                 isExpanded: true,
-                items: _myEvents.map((e) => DropdownMenuItem(
-                  value: e,
-                  child: Text(e.title, overflow: TextOverflow.ellipsis),
-                )).toList(),
+                items: _myEvents
+                    .map((e) => DropdownMenuItem(
+                          value: e,
+                          child: Text(e.title, overflow: TextOverflow.ellipsis),
+                        ))
+                    .toList(),
                 onChanged: (val) => setState(() => _selectedEvent = val),
                 decoration: InputDecoration(
                   labelText: 'Event',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.r)),
                   prefixIcon: const Icon(Icons.event),
                 ),
               ),
@@ -163,12 +181,10 @@ class _GalleryUploadScreenState extends State<GalleryUploadScreen> {
                     height: 200.h,
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        Container(
-                            height: 200.h,
-                            color: Colors.grey[200],
-                            child: const Center(child: Icon(Icons.broken_image))
-                        ),
+                    errorBuilder: (context, error, stackTrace) => Container(
+                        height: 200.h,
+                        color: Colors.grey[200],
+                        child: const Center(child: Icon(Icons.broken_image))),
                   ),
                 ),
               ],
@@ -185,7 +201,8 @@ class _GalleryUploadScreenState extends State<GalleryUploadScreen> {
                   label: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text('Upload to Gallery'),
-                  style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+                  style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary),
                 ),
               ),
             ],

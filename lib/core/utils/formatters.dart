@@ -11,4 +11,3 @@ class Formatters {
   static String formatDateTime(DateTime dateTime) =>
       '${_dateFormatter.format(dateTime)} · ${_timeFormatter.format(dateTime)}';
 }
-

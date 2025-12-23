@@ -29,7 +29,7 @@ class _SplashScreenState extends State<SplashScreen> {
     await Future<void>.delayed(const Duration(milliseconds: 10000));
 
     try {
-      final user = await _authService.currentUser;
+      final user = _authService.currentUser;
 
       // Get the storage service to check the flag
       final storageService = serviceLocator<StorageService>(); // Add this line
@@ -46,15 +46,15 @@ class _SplashScreenState extends State<SplashScreen> {
       } else {
         // 2. NEW LOGIC: Check for first launch
         if (storageService.isFirstLaunch) {
-          print("🆕 First launch! Going to Onboarding");
+          debugPrint("🆕 First launch! Going to Onboarding");
           context.go(AppRoutes.onboarding);
         } else {
-          print("🚀 Not first launch. Going to Login");
+          debugPrint("🚀 Not first launch. Going to Login");
           context.go(AppRoutes.login);
         }
       }
     } catch (e) {
-      print("❌ CRITICAL ERROR in Splash: $e");
+      debugPrint("❌ CRITICAL ERROR in Splash: $e");
       if (mounted) context.go(AppRoutes.login);
     }
   }

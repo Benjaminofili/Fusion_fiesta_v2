@@ -8,7 +8,6 @@ import 'dart:ui' as ui;
 
 import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_routes.dart';
-import '../../../../../core/constants/app_sizes.dart';
 import '../../../../../core/services/storage_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -57,20 +56,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _OnboardingPage(
                     title: 'Cultural Events',
                     description:
-                    'Music, Dance, Drama. Experience the vibrant soul of our college.',
+                        'Music, Dance, Drama. Experience the vibrant soul of our college.',
                     // We keep the scene exactly as you wrote it
                     scene: _CulturalScene(),
                   ),
                   _OnboardingPage(
                     title: 'Technical Fests',
                     description:
-                    'Hackathons, Workshops, Coding. Showcase your innovation.',
+                        'Hackathons, Workshops, Coding. Showcase your innovation.',
                     scene: _TechScene(),
                   ),
                   _OnboardingPage(
                     title: 'Sports Meets',
                     description:
-                    'Inter-college tournaments. Compete and conquer.',
+                        'Inter-college tournaments. Compete and conquer.',
                     scene: _SportsScene(),
                   ),
                 ],
@@ -112,29 +111,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       // Next / Get Started - White Button
                       _currentPage == 2
                           ? FilledButton(
-                        onPressed: _finishOnboarding,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: _pageColors[_currentPage],
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 12),
-                        ),
-                        child: const Text(
-                          'Get Started',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      )
+                              onPressed: _finishOnboarding,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: _pageColors[_currentPage],
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 24, vertical: 12),
+                              ),
+                              child: const Text(
+                                'Get Started',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            )
                           : IconButton.filled(
-                        onPressed: () => _controller.nextPage(
-                          duration: const Duration(milliseconds: 500),
-                          curve: Curves.easeIn,
-                        ),
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: _pageColors[_currentPage],
-                        ),
-                        icon: const Icon(Icons.arrow_forward, size: 20),
-                      ),
+                              onPressed: () => _controller.nextPage(
+                                duration: const Duration(milliseconds: 500),
+                                curve: Curves.easeIn,
+                              ),
+                              style: IconButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: _pageColors[_currentPage],
+                              ),
+                              icon: const Icon(Icons.arrow_forward, size: 20),
+                            ),
                     ],
                   ),
                 ),
@@ -186,11 +185,11 @@ class _OnboardingPage extends StatelessWidget {
             title,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-              fontSize: 24.sp, // Scalable font
-              letterSpacing: -0.5,
-            ),
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  fontSize: 24.sp, // Scalable font
+                  letterSpacing: -0.5,
+                ),
           ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2, end: 0),
 
           SizedBox(height: 16.h),
@@ -199,10 +198,10 @@ class _OnboardingPage extends StatelessWidget {
             description,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 16.sp, // Scalable font
-              height: 1.5,
-            ),
+                  color: Colors.white.withValues(alpha:0.9),
+                  fontSize: 16.sp, // Scalable font
+                  height: 1.5,
+                ),
           ).animate().fadeIn(delay: 200.ms, duration: 600.ms),
 
           SizedBox(height: 80.h), // Space for bottom controls
@@ -221,11 +220,11 @@ class _StyledIcon extends StatelessWidget {
   final Color? color2;
 
   const _StyledIcon(
-      this.icon, {
-        required this.size,
-        required this.color,
-        this.color2,
-      });
+    this.icon, {
+    required this.size,
+    required this.color,
+    this.color2,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -248,7 +247,7 @@ class _StyledIcon extends StatelessWidget {
               child: Icon(
                 icon,
                 size: size,
-                color: color.withOpacity(0.4),
+                color: color.withValues(alpha:0.4),
               ),
             ),
           ),
@@ -261,7 +260,7 @@ class _StyledIcon extends StatelessWidget {
               end: Alignment.bottomRight,
               colors: [
                 color,
-                color2 ?? color.withOpacity(0.6),
+                color2 ?? color.withValues(alpha:0.6),
               ],
             ).createShader(bounds),
             child: Icon(
@@ -276,7 +275,7 @@ class _StyledIcon extends StatelessWidget {
             blendMode: BlendMode.plus,
             shaderCallback: (bounds) => RadialGradient(
               colors: [
-                color.withOpacity(0.3),
+                color.withValues(alpha:0.3),
                 Colors.transparent,
               ],
               stops: const [0.4, 1.0],
@@ -309,19 +308,20 @@ class _CulturalScene extends StatelessWidget {
           height: 280,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.deepPurple.withOpacity(0.2), // Slightly boosted opacity for visibility
+            color: Colors.deepPurple
+                .withValues(alpha:0.2), // Slightly boosted opacity for visibility
           ),
         )
             .animate()
             .scale(
-            duration: 2.seconds,
-            begin: const Offset(0.95, 0.95),
-            end: const Offset(1.05, 1.05))
+                duration: 2.seconds,
+                begin: const Offset(0.95, 0.95),
+                end: const Offset(1.05, 1.05))
             .animate(onPlay: (c) => c.repeat(reverse: true)),
         const _StyledIcon(FontAwesomeIcons.masksTheater,
-            size: 120,
-            color: Colors.deepPurple, // Stays dark/saturated
-            color2: Colors.purpleAccent)
+                size: 120,
+                color: Colors.deepPurple, // Stays dark/saturated
+                color2: Colors.purpleAccent)
             .animate()
             .fadeIn(duration: 800.ms)
             .scale(curve: Curves.elasticOut, duration: 800.ms),
@@ -329,12 +329,12 @@ class _CulturalScene extends StatelessWidget {
           bottom: 60,
           left: 40,
           child: const _StyledIcon(FontAwesomeIcons.guitar,
-              size: 60, color: Colors.pink, color2: Colors.deepOrange)
+                  size: 60, color: Colors.pink, color2: Colors.deepOrange)
               .animate()
               .slide(
-              begin: const Offset(-0.5, 0.5),
-              duration: 600.ms,
-              curve: Curves.easeOutBack)
+                  begin: const Offset(-0.5, 0.5),
+                  duration: 600.ms,
+                  curve: Curves.easeOutBack)
               .rotate(begin: -0.1, end: 0.05)
               .animate(onPlay: (c) => c.repeat(reverse: true))
               .shake(hz: 1.5, rotation: 0.05),
@@ -343,13 +343,13 @@ class _CulturalScene extends StatelessWidget {
           top: 60,
           right: 50,
           child: const _StyledIcon(FontAwesomeIcons.music,
-              size: 45, color: Colors.indigoAccent, color2: Colors.blue)
+                  size: 45, color: Colors.indigoAccent, color2: Colors.blue)
               .animate(onPlay: (c) => c.repeat())
               .moveY(
-              begin: 0,
-              end: -15,
-              duration: 2.seconds,
-              curve: Curves.easeInOut)
+                  begin: 0,
+                  end: -15,
+                  duration: 2.seconds,
+                  curve: Curves.easeInOut)
               .fadeIn(),
         ),
       ],
@@ -371,38 +371,38 @@ class _TechScene extends StatelessWidget {
           height: 280,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.blue.withOpacity(0.2),
+            color: Colors.blue.withValues(alpha:0.2),
           ),
         )
             .animate()
             .scale(
-            duration: 3.seconds,
-            begin: const Offset(1, 1),
-            end: const Offset(1.1, 1.1))
+                duration: 3.seconds,
+                begin: const Offset(1, 1),
+                end: const Offset(1.1, 1.1))
             .animate(onPlay: (c) => c.repeat(reverse: true)),
         const Positioned(
           bottom: 80,
           child: _StyledIcon(FontAwesomeIcons.laptopCode,
               size: 110, color: Colors.blue, color2: Colors.cyanAccent),
-        )
-            .animate()
-            .fadeIn()
-            .slideY(
+        ).animate().fadeIn().slideY(
             begin: 0.5, end: 0, duration: 600.ms, curve: Curves.easeOutBack),
         Positioned(
           top: 40,
           right: 60,
           child: const _StyledIcon(FontAwesomeIcons.rocket,
-              size: 70, color: Colors.orange, color2: Colors.redAccent)
+                  size: 70, color: Colors.orange, color2: Colors.redAccent)
               .animate(onPlay: (c) => c.repeat(reverse: true))
               .moveY(
-              begin: 5, end: -5, duration: 2.seconds, curve: Curves.easeInOut),
+                  begin: 5,
+                  end: -5,
+                  duration: 2.seconds,
+                  curve: Curves.easeInOut),
         ),
         Positioned(
           left: 50,
           top: 100,
           child: const _StyledIcon(FontAwesomeIcons.code,
-              size: 50, color: Colors.indigo, color2: Colors.purple)
+                  size: 50, color: Colors.indigo, color2: Colors.purple)
               .animate()
               .scale(delay: 400.ms, duration: 400.ms, curve: Curves.elasticOut),
         ),
@@ -425,39 +425,45 @@ class _SportsScene extends StatelessWidget {
           height: 280,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.orange.withOpacity(0.2),
+            color: Colors.orange.withValues(alpha:0.2),
           ),
         )
             .animate()
             .scale(duration: 2.seconds)
             .animate(onPlay: (c) => c.repeat(reverse: true)),
         const _StyledIcon(FontAwesomeIcons.trophy,
-            size: 120, color: Colors.amber, color2: Colors.orange)
+                size: 120, color: Colors.amber, color2: Colors.orange)
             .animate()
             .scale(
-            begin: const Offset(0.5, 0.5),
-            curve: Curves.elasticOut,
-            duration: 1.seconds)
+                begin: const Offset(0.5, 0.5),
+                curve: Curves.elasticOut,
+                duration: 1.seconds)
             .shimmer(delay: 1500.ms, duration: 2.seconds),
         Positioned(
           bottom: 60,
           left: 40,
           child: const _StyledIcon(FontAwesomeIcons.personRunning,
-              size: 65, color: Colors.deepOrange, color2: Colors.red)
+                  size: 65, color: Colors.deepOrange, color2: Colors.red)
               .animate()
               .slideX(
-              begin: -1, end: 0, duration: 600.ms, curve: Curves.easeOutBack),
+                  begin: -1,
+                  end: 0,
+                  duration: 600.ms,
+                  curve: Curves.easeOutBack),
         ),
         Positioned(
           top: 70,
           right: 50,
           child: const _StyledIcon(FontAwesomeIcons.basketball,
-              size: 50,
-              color: Colors.orangeAccent,
-              color2: Colors.deepOrange)
+                  size: 50,
+                  color: Colors.orangeAccent,
+                  color2: Colors.deepOrange)
               .animate(onPlay: (c) => c.repeat(reverse: true))
               .moveY(
-              begin: -20, end: 0, duration: 500.ms, curve: Curves.bounceOut),
+                  begin: -20,
+                  end: 0,
+                  duration: 500.ms,
+                  curve: Curves.bounceOut),
         ),
       ],
     );

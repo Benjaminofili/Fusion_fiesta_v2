@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fusion_fiesta/core/widgets/notification_badge.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
@@ -16,7 +15,8 @@ class OrganizerDashboardScreen extends StatefulWidget {
   const OrganizerDashboardScreen({super.key});
 
   @override
-  State<OrganizerDashboardScreen> createState() => _OrganizerDashboardScreenState();
+  State<OrganizerDashboardScreen> createState() =>
+      _OrganizerDashboardScreenState();
 }
 
 class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
@@ -32,7 +32,7 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
   }
 
   Future<void> _loadUser() async {
-    final user = await _authService.currentUser;
+    final user = _authService.currentUser;
     if (mounted) setState(() => _currentUser = user);
   }
 
@@ -49,15 +49,20 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'LIVE': return Colors.red;
-      case 'COMPLETED': return Colors.grey;
-      default: return AppColors.primary;
+      case 'LIVE':
+        return Colors.red;
+      case 'COMPLETED':
+        return Colors.grey;
+      default:
+        return AppColors.primary;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_currentUser == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_currentUser == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
@@ -67,7 +72,7 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
         title: Row(
           children: [
             CircleAvatar(
-              backgroundColor: AppColors.primary.withOpacity(0.1),
+              backgroundColor: AppColors.primary.withValues(alpha:0.1),
               backgroundImage: _currentUser?.profilePictureUrl != null
                   ? NetworkImage(_currentUser!.profilePictureUrl!)
                   : null,
@@ -79,8 +84,13 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Organizer Panel', style: TextStyle(color: Colors.grey, fontSize: 12.sp)),
-                Text(_currentUser!.name, style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16.sp)),
+                Text('Organizer Panel',
+                    style: TextStyle(color: Colors.grey, fontSize: 12.sp)),
+                Text(_currentUser!.name,
+                    style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16.sp)),
               ],
             ),
           ],
@@ -104,7 +114,9 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
       body: StreamBuilder<List<Event>>(
         stream: _eventRepository.getEventsStream(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
           final myEvents = snapshot.data!.where((e) {
             return e.organizerId == _currentUser!.id ||
@@ -146,7 +158,9 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
                 SizedBox(height: 24.h),
 
                 // --- 2. QUICK ACTIONS ---
-                Text('Quick Actions', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                Text('Quick Actions',
+                    style: TextStyle(
+                        fontSize: 18.sp, fontWeight: FontWeight.bold)),
                 SizedBox(height: 12.h),
                 Row(
                   children: [
@@ -171,9 +185,12 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
                       label: 'Scan QR',
                       onTap: () {
                         if (myEvents.isNotEmpty) {
-                          context.push('${AppRoutes.events}/attendance', extra: myEvents.first);
+                          context.push('${AppRoutes.events}/attendance',
+                              extra: myEvents.first);
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No events to scan')));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('No events to scan')));
                         }
                       },
                     ),
@@ -191,8 +208,12 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('My Events', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
-                    TextButton(onPressed: () => context.push('/organizer/events'), child: const Text('View All')),
+                    Text('My Events',
+                        style: TextStyle(
+                            fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                    TextButton(
+                        onPressed: () => context.push('/organizer/events'),
+                        child: const Text('View All')),
                   ],
                 ),
 
@@ -200,7 +221,8 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
                   Container(
                     padding: EdgeInsets.all(32.h),
                     alignment: Alignment.center,
-                    child: const Text('No events created yet.\nTap "+ Create Event" to start.'),
+                    child: const Text(
+                        'No events created yet.\nTap "+ Create Event" to start.'),
                   )
                 else
                   ListView.builder(
@@ -214,7 +236,8 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
 
                       return Card(
                         margin: EdgeInsets.only(bottom: 16.h),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16.r)),
                         elevation: 0,
                         color: Colors.white,
                         child: Padding(
@@ -229,15 +252,17 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
                                   Container(
                                     padding: EdgeInsets.all(10.w),
                                     decoration: BoxDecoration(
-                                      color: AppColors.primary.withOpacity(0.1),
+                                      color: AppColors.primary.withValues(alpha:0.1),
                                       borderRadius: BorderRadius.circular(12.r),
                                     ),
-                                    child: Icon(Icons.event_note, color: AppColors.primary, size: 24.sp),
+                                    child: Icon(Icons.event_note,
+                                        color: AppColors.primary, size: 24.sp),
                                   ),
                                   SizedBox(width: 12.w),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         // Title (Full Width)
                                         Text(
@@ -256,21 +281,30 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
                                         Row(
                                           children: [
                                             Container(
-                                              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                                              padding: EdgeInsets.symmetric(
+                                                  horizontal: 8.w,
+                                                  vertical: 2.h),
                                               decoration: BoxDecoration(
-                                                color: statusColor.withOpacity(0.1),
-                                                borderRadius: BorderRadius.circular(4.r),
+                                                color: statusColor
+                                                    .withValues(alpha:0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(4.r),
                                               ),
                                               child: Text(
                                                 status,
-                                                style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.bold, color: statusColor),
+                                                style: TextStyle(
+                                                    fontSize: 10.sp,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: statusColor),
                                               ),
                                             ),
                                             SizedBox(width: 8.w),
                                             Expanded(
                                               child: Text(
                                                 '${event.registeredCount} Reg. • ${event.location}',
-                                                style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
+                                                style: TextStyle(
+                                                    fontSize: 12.sp,
+                                                    color: Colors.grey[600]),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                               ),
@@ -286,28 +320,48 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
                                     height: 24.w,
                                     child: PopupMenuButton<String>(
                                       padding: EdgeInsets.zero,
-                                      icon: Icon(Icons.more_vert, size: 20.sp, color: Colors.grey),
+                                      icon: Icon(Icons.more_vert,
+                                          size: 20.sp, color: Colors.grey),
                                       onSelected: (value) {
                                         if (value == 'announce') {
-                                          context.push('${AppRoutes.events}/announce', extra: event);
+                                          context.push(
+                                              '${AppRoutes.events}/announce',
+                                              extra: event);
                                         } else if (value == 'feedback') {
-                                          context.push('${AppRoutes.events}/feedback-review', extra: event);
+                                          context.push(
+                                              '${AppRoutes.events}/feedback-review',
+                                              extra: event);
                                         } else if (value == 'close') {
-                                          context.push('${AppRoutes.events}/post-event', extra: event);
+                                          context.push(
+                                              '${AppRoutes.events}/post-event',
+                                              extra: event);
                                         }
                                       },
                                       itemBuilder: (context) => [
                                         const PopupMenuItem(
                                           value: 'announce',
-                                          child: Row(children: [Icon(Icons.campaign, size: 18), SizedBox(width: 8), Text('Announcement')]),
+                                          child: Row(children: [
+                                            Icon(Icons.campaign, size: 18),
+                                            SizedBox(width: 8),
+                                            Text('Announcement')
+                                          ]),
                                         ),
                                         const PopupMenuItem(
                                           value: 'feedback',
-                                          child: Row(children: [Icon(Icons.star_half, size: 18), SizedBox(width: 8), Text('View Feedback')]),
+                                          child: Row(children: [
+                                            Icon(Icons.star_half, size: 18),
+                                            SizedBox(width: 8),
+                                            Text('View Feedback')
+                                          ]),
                                         ),
                                         const PopupMenuItem(
                                           value: 'close',
-                                          child: Row(children: [Icon(Icons.check_circle_outline, size: 18), SizedBox(width: 8), Text('Post-Event')]),
+                                          child: Row(children: [
+                                            Icon(Icons.check_circle_outline,
+                                                size: 18),
+                                            SizedBox(width: 8),
+                                            Text('Post-Event')
+                                          ]),
                                         ),
                                       ],
                                     ),
@@ -324,26 +378,36 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> {
                                 children: [
                                   Expanded(
                                     child: OutlinedButton.icon(
-                                      onPressed: () => context.push('${AppRoutes.events}/participants', extra: event),
+                                      onPressed: () => context.push(
+                                          '${AppRoutes.events}/participants',
+                                          extra: event),
                                       icon: const Icon(Icons.people, size: 16),
                                       label: const Text('Participants'),
                                       style: OutlinedButton.styleFrom(
-                                        padding: EdgeInsets.symmetric(vertical: 10.h),
-                                        side: BorderSide(color: Colors.grey.shade300),
-                                        foregroundColor: AppColors.textSecondary,
+                                        padding: EdgeInsets.symmetric(
+                                            vertical: 10.h),
+                                        side: BorderSide(
+                                            color: Colors.grey.shade300),
+                                        foregroundColor:
+                                            AppColors.textSecondary,
                                       ),
                                     ),
                                   ),
                                   SizedBox(width: 12.w),
                                   Expanded(
                                     child: OutlinedButton.icon(
-                                      onPressed: () => context.push('${AppRoutes.events}/edit', extra: event),
+                                      onPressed: () => context.push(
+                                          '${AppRoutes.events}/edit',
+                                          extra: event),
                                       icon: const Icon(Icons.edit, size: 16),
                                       label: const Text('Edit Event'),
                                       style: OutlinedButton.styleFrom(
-                                        padding: EdgeInsets.symmetric(vertical: 10.h),
-                                        side: BorderSide(color: Colors.grey.shade300),
-                                        foregroundColor: AppColors.textSecondary,
+                                        padding: EdgeInsets.symmetric(
+                                            vertical: 10.h),
+                                        side: BorderSide(
+                                            color: Colors.grey.shade300),
+                                        foregroundColor:
+                                            AppColors.textSecondary,
                                       ),
                                     ),
                                   ),
@@ -372,7 +436,11 @@ class _StatCard extends StatelessWidget {
   final IconData icon;
   final Color color;
 
-  const _StatCard({required this.label, required this.value, required this.icon, required this.color});
+  const _StatCard(
+      {required this.label,
+      required this.value,
+      required this.icon,
+      required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -381,18 +449,22 @@ class _StatCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha:0.05), blurRadius: 10)
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: EdgeInsets.all(8.w),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+            decoration: BoxDecoration(
+                color: color.withValues(alpha:0.1), shape: BoxShape.circle),
             child: Icon(icon, color: color, size: 20.sp),
           ),
           SizedBox(height: 12.h),
-          Text(value, style: TextStyle(fontSize: 24.sp, fontWeight: FontWeight.bold)),
+          Text(value,
+              style: TextStyle(fontSize: 24.sp, fontWeight: FontWeight.bold)),
           Text(label, style: TextStyle(fontSize: 12.sp, color: Colors.grey)),
         ],
       ),
@@ -405,7 +477,8 @@ class _ActionButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _ActionButton({required this.icon, required this.label, required this.onTap});
+  const _ActionButton(
+      {required this.icon, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -424,7 +497,10 @@ class _ActionButton extends StatelessWidget {
             children: [
               Icon(icon, color: AppColors.primary),
               SizedBox(height: 8.h),
-              Text(label, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.sp), textAlign: TextAlign.center),
+              Text(label,
+                  style:
+                      TextStyle(fontWeight: FontWeight.w600, fontSize: 13.sp),
+                  textAlign: TextAlign.center),
             ],
           ),
         ),

@@ -22,7 +22,8 @@ class FeedbackFormScreen extends StatefulWidget {
 
 class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
   final _commentController = TextEditingController();
-  final _eventRepository = serviceLocator<EventRepository>(); // Existing injection
+  final _eventRepository =
+      serviceLocator<EventRepository>(); // Existing injection
 
   List<Event> _attendedEvents = [];
   Event? _selectedEvent;
@@ -73,7 +74,7 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
 
     try {
       final authService = serviceLocator<AuthService>();
-      final user = await authService.currentUser;
+      final user = authService.currentUser;
 
       if (user == null) return;
 
@@ -120,7 +121,8 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back_ios_new,
+              color: AppColors.textPrimary),
           onPressed: () => context.pop(),
         ),
         title: Text(
@@ -143,57 +145,63 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
                   Container(
                     padding: EdgeInsets.all(16.w),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha:0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.rate_review_outlined, size: 40.sp, color: AppColors.primary),
+                    child: Icon(Icons.rate_review_outlined,
+                        size: 40.sp, color: AppColors.primary),
                   ),
                   SizedBox(height: 24.h),
-
                   if (widget.event != null)
                     Text(
                       widget.event!.title,
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      style: TextStyle(
+                          fontSize: 22.sp,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary),
                     )
                   else if (_isLoadingEvents)
                     const CircularProgressIndicator()
                   else
                     DropdownButtonFormField<Event>(
-                      value: _selectedEvent,
+                      initialValue: _selectedEvent,
                       hint: const Text('Select Event to Rate'),
                       isExpanded: true,
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16.w, vertical: 12.h),
                       ),
                       items: _attendedEvents.map((event) {
                         return DropdownMenuItem(
                           value: event,
-                          child: Text(event.title, overflow: TextOverflow.ellipsis),
+                          child: Text(event.title,
+                              overflow: TextOverflow.ellipsis),
                         );
                       }).toList(),
                       onChanged: (val) => setState(() => _selectedEvent = val),
                     ),
-
                   SizedBox(height: 8.h),
                   Text(
                     'How was your experience?',
-                    style: TextStyle(fontSize: 16.sp, color: AppColors.textSecondary),
+                    style: TextStyle(
+                        fontSize: 16.sp, color: AppColors.textSecondary),
                   ),
                 ],
               ),
             ),
             SizedBox(height: 40.h),
-
-            _buildRatingRow('Overall Experience', _ratingOverall, (v) => setState(() => _ratingOverall = v)),
+            _buildRatingRow('Overall Experience', _ratingOverall,
+                (v) => setState(() => _ratingOverall = v)),
             SizedBox(height: 24.h),
-            _buildRatingRow('Organization', _ratingOrganization, (v) => setState(() => _ratingOrganization = v)),
+            _buildRatingRow('Organization', _ratingOrganization,
+                (v) => setState(() => _ratingOrganization = v)),
             SizedBox(height: 24.h),
-            _buildRatingRow('Content Relevance', _ratingRelevance, (v) => setState(() => _ratingRelevance = v)),
-
+            _buildRatingRow('Content Relevance', _ratingRelevance,
+                (v) => setState(() => _ratingRelevance = v)),
             SizedBox(height: 40.h),
-
             Text(
               'Additional Comments',
               style: TextStyle(
@@ -217,9 +225,7 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
                 contentPadding: EdgeInsets.all(16.w),
               ),
             ),
-
             SizedBox(height: 40.h),
-
             SizedBox(
               width: double.infinity,
               height: 56.h,
@@ -234,12 +240,12 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
                 child: _isSubmitting
                     ? const CircularProgressIndicator(color: Colors.white)
                     : Text(
-                  'Submit Feedback',
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                        'Submit Feedback',
+                        style: TextStyle(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
           ],
@@ -248,7 +254,8 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
     );
   }
 
-  Widget _buildRatingRow(String label, double rating, ValueChanged<double> onUpdate) {
+  Widget _buildRatingRow(
+      String label, double rating, ValueChanged<double> onUpdate) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

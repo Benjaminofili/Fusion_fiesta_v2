@@ -21,7 +21,9 @@ class OrganizerCalendarScreen extends StatelessWidget {
       body: StreamBuilder<List<Event>>(
         stream: eventRepo.getEventsStream(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
           final events = snapshot.data!;
           events.sort((a, b) => a.startTime.compareTo(b.startTime));
@@ -34,8 +36,7 @@ class OrganizerCalendarScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final event = events[index];
               final day = DateFormat('d').format(event.startTime);
-              final month = DateFormat('MMM').format(event.startTime);
-              final year = DateFormat('y').format(event.startTime);
+              final monthYear = DateFormat('MMM yyyy').format(event.startTime);  // ✅ Combined
 
               return Card(
                 margin: EdgeInsets.only(bottom: 12.h),
@@ -44,20 +45,30 @@ class OrganizerCalendarScreen extends StatelessWidget {
                     width: 60.w,
                     padding: EdgeInsets.symmetric(vertical: 4.h),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8.r),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(day, style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                        Text(month, style: TextStyle(fontSize: 12.sp, color: AppColors.textSecondary)),
+                        Text(day,
+                            style: TextStyle(
+                                fontSize: 18.sp,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary)),
+                        Text(monthYear,  // ✅ Shows "Jan 2025"
+                            style: TextStyle(
+                                fontSize: 10.sp, color: AppColors.textSecondary)),
                       ],
                     ),
                   ),
-                  title: Text(event.title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp)),
-                  subtitle: Text('${DateFormat('h:mm a').format(event.startTime)} • ${event.location}'),
-                  onTap: () => context.push('${AppRoutes.events}/details', extra: event),
+                  title: Text(event.title,
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16.sp)),
+                  subtitle: Text(
+                      '${DateFormat('h:mm a').format(event.startTime)} • ${event.location}'),
+                  onTap: () =>
+                      context.push('${AppRoutes.events}/details', extra: event),
                 ),
               );
             },

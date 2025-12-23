@@ -15,32 +15,20 @@ class AlertsScreen extends StatefulWidget {
 }
 
 class _AlertsScreenState extends State<AlertsScreen> {
+  // Ensure your AdminRepositoryImpl is updated to return Stream<List<SystemAlert>>
   final _repo = serviceLocator<AdminRepository>();
-  List<SystemAlert> _alerts = [];
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadAlerts();
-  }
-
-  Future<void> _loadAlerts() async {
-    final data = await _repo.getSystemAlerts();
-    if (mounted) {
-      setState(() {
-        _alerts = data;
-        _isLoading = false;
-      });
-    }
-  }
 
   Future<void> _resolve(String id) async {
+    // We only call the repo. The StreamBuilder will handle the UI update automatically.
     await _repo.resolveAlert(id);
-    _loadAlerts(); // Refresh
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Alert resolved and archived.')),
+        const SnackBar(
+          content: Text('Alert resolved'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
@@ -49,19 +37,34 @@ class _AlertsScreenState extends State<AlertsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('System Alerts')),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _alerts.isEmpty
-          ? _buildEmptyState()
-          : ListView.separated(
-        padding: EdgeInsets.all(16.w),
-        itemCount: _alerts.length,
-        separatorBuilder: (_, __) => SizedBox(height: 12.h),
-        itemBuilder: (context, index) {
-          final alert = _alerts[index];
-          return _AlertCard(
-            alert: alert,
-            onResolve: () => _resolve(alert.id),
+      body: StreamBuilder<List<SystemAlert>>(
+        stream: _repo.getSystemAlertsStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          final alerts = snapshot.data ?? [];
+
+          if (alerts.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          return ListView.separated(
+            padding: EdgeInsets.all(16.w),
+            itemCount: alerts.length,
+            separatorBuilder: (_, __) => SizedBox(height: 12.h),
+            itemBuilder: (context, index) {
+              final alert = alerts[index];
+              return _AlertCard(
+                alert: alert,
+                onResolve: () => _resolve(alert.id),
+              );
+            },
           );
         },
       ),
@@ -73,9 +76,17 @@ class _AlertsScreenState extends State<AlertsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.check_circle_outline, size: 64.sp, color: Colors.green[200]),
+          Icon(Icons.check_circle_outline,
+              size: 64.sp, color: Colors.green[200]),
           SizedBox(height: 16.h),
-          Text('System Healthy', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: Colors.green)),
+          Text(
+            'System Healthy',
+            style: TextStyle(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.bold,
+              color: Colors.green,
+            ),
+          ),
           Text('No active alerts', style: TextStyle(color: Colors.grey[500])),
         ],
       ),
@@ -113,7 +124,7 @@ class _AlertCard extends StatelessWidget {
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.r),
-        side: BorderSide(color: color.withOpacity(0.3)),
+        side: BorderSide(color: color.withValues(alpha:0.3)),
       ),
       child: Padding(
         padding: EdgeInsets.all(16.w),
@@ -126,8 +137,27 @@ class _AlertCard extends StatelessWidget {
                 SizedBox(width: 8.w),
                 Text(
                   alert.type.name.toUpperCase(),
-                  style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12.sp),
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12.sp,
+                  ),
                 ),
+                if (alert.severity == AlertSeverity.high) ...[
+                  SizedBox(width: 8.w),
+                  Container(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                    decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        borderRadius: BorderRadius.circular(4)),
+                    child: Text('HIGH',
+                        style: TextStyle(
+                            fontSize: 10.sp,
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold)),
+                  )
+                ],
                 const Spacer(),
                 Text(
                   DateFormat('h:mm a').format(alert.timestamp),
@@ -136,9 +166,15 @@ class _AlertCard extends StatelessWidget {
               ],
             ),
             SizedBox(height: 12.h),
-            Text(alert.title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp)),
+            Text(
+              alert.title,
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp),
+            ),
             SizedBox(height: 4.h),
-            Text(alert.message, style: TextStyle(color: AppColors.textSecondary, fontSize: 14.sp)),
+            Text(
+              alert.message,
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 14.sp),
+            ),
             SizedBox(height: 16.h),
             Align(
               alignment: Alignment.centerRight,

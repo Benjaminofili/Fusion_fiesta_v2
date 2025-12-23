@@ -31,4 +31,3 @@ class AppRoutes {
   // Admin Routes
   static const String adminDashboard = '/admin/dashboard';
 }
-

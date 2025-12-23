@@ -1,7 +1,6 @@
 import 'dart:io'; // Required for File handling
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
@@ -20,7 +19,8 @@ class GalleryScreen extends StatefulWidget {
 }
 
 class _GalleryScreenState extends State<GalleryScreen> {
-  final GalleryRepository _galleryRepository = serviceLocator<GalleryRepository>();
+  final GalleryRepository _galleryRepository =
+      serviceLocator<GalleryRepository>();
   final AuthService _authService = serviceLocator<AuthService>();
 
   String _activeCategory = 'All';
@@ -33,7 +33,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   Future<void> _loadUserRole() async {
-    final user = await _authService.currentUser;
+    final user = _authService.currentUser;
     if (mounted) setState(() => _userRole = user?.role ?? AppRole.visitor);
   }
 
@@ -56,12 +56,15 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final canUpload = _userRole == AppRole.organizer || _userRole == AppRole.admin;
+    final canUpload =
+        _userRole == AppRole.organizer || _userRole == AppRole.admin;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
-        title: const Text('Event Gallery', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+        title: const Text('Event Gallery',
+            style: TextStyle(
+                color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -91,10 +94,13 @@ class _GalleryScreenState extends State<GalleryScreen> {
             child: StreamBuilder<List<GalleryItem>>(
               stream: _galleryRepository.getGalleryStream(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
                 final items = snapshot.data!.where((item) {
-                  return _activeCategory == 'All' || item.category == _activeCategory;
+                  return _activeCategory == 'All' ||
+                      item.category == _activeCategory;
                 }).toList();
 
                 if (items.isEmpty) {
@@ -102,9 +108,11 @@ class _GalleryScreenState extends State<GalleryScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.photo_library_outlined, size: 48, color: Colors.grey[300]),
+                        Icon(Icons.photo_library_outlined,
+                            size: 48, color: Colors.grey[300]),
                         const SizedBox(height: 16),
-                        Text('No media found', style: TextStyle(color: Colors.grey[500])),
+                        Text('No media found',
+                            style: TextStyle(color: Colors.grey[500])),
                       ],
                     ),
                   );
@@ -125,7 +133,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
                       item: item,
                       userRole: _userRole,
                       onFavorite: () => _onToggleFavorite(item.id),
-                      onTap: () => context.push('${AppRoutes.gallery}/view', extra: item),
+                      onTap: () => context.push('${AppRoutes.gallery}/view',
+                          extra: item),
                     );
                   },
                 );
@@ -169,7 +178,7 @@ class _GalleryItemCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           color: Colors.white,
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4),
+            BoxShadow(color: Colors.black.withValues(alpha:0.05), blurRadius: 4),
           ],
         ),
         clipBehavior: Clip.antiAlias,
@@ -184,7 +193,8 @@ class _GalleryItemCard extends StatelessWidget {
                 if (progress == null) return child;
                 return Container(
                   color: Colors.grey[100],
-                  child: const Center(child: Icon(Icons.image, color: Colors.white)),
+                  child: const Center(
+                      child: Icon(Icons.image, color: Colors.white)),
                 );
               },
               errorBuilder: (_, __, ___) => Container(
@@ -202,10 +212,7 @@ class _GalleryItemCard extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.8),
-                      Colors.transparent
-                    ],
+                    colors: [Colors.black.withValues(alpha:0.8), Colors.transparent],
                   ),
                 ),
               ),
@@ -223,8 +230,7 @@ class _GalleryItemCard extends StatelessWidget {
                 style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
-                    fontWeight: FontWeight.w500
-                ),
+                    fontWeight: FontWeight.w500),
               ),
             ),
 
@@ -249,10 +255,11 @@ class _GalleryItemCard extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withValues(alpha:0.5),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.play_arrow, color: Colors.white, size: 32),
+                  child: const Icon(Icons.play_arrow,
+                      color: Colors.white, size: 32),
                 ),
               ),
           ],

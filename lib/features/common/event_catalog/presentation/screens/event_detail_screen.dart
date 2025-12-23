@@ -57,7 +57,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   }
 
   Future<void> _loadUserAndStatus() async {
-    final user = await _authService.currentUser;
+    final user = _authService.currentUser;
     if (user != null) {
       if (mounted) {
         setState(() {
@@ -71,7 +71,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
   Future<void> _checkStatus(String userId) async {
     try {
-      final favoriteIds = await _eventRepository.getFavoriteEventIdsStream(userId).first;
+      final favoriteIds =
+          await _eventRepository.getFavoriteEventIdsStream(userId).first;
       if (mounted) {
         setState(() {
           _isFavorite = favoriteIds.contains(widget.event.id);
@@ -92,13 +93,18 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Event ${status.name.toUpperCase()} successfully'),
-            backgroundColor: status == EventStatus.approved ? AppColors.success : AppColors.error,
+            backgroundColor: status == EventStatus.approved
+                ? AppColors.success
+                : AppColors.error,
           ),
         );
         context.pop(); // Return to list after action
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isActionLoading = false);
     }
@@ -123,7 +129,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         await _eventRepository.registerForEvent(widget.event.id, _userId!);
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
     } finally {
       if (mounted) setState(() => _isActionLoading = false);
     }
@@ -146,7 +155,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Contact $organizerName', style: TextStyle(fontSize: 18.sp)),
+        title:
+            Text('Contact $organizerName', style: TextStyle(fontSize: 18.sp)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -161,7 +171,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               maxLines: 4,
               decoration: InputDecoration(
                 hintText: 'Type your message here...',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r)),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r)),
                 filled: true,
                 fillColor: const Color(0xFFF9FAFB),
               ),
@@ -214,8 +225,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             // 1. FIND LIVE EVENT (Handle updates or deletions)
             final liveEvent = snapshot.data?.firstWhere(
                   (e) => e.id == widget.event.id,
-              orElse: () => widget.event,
-            ) ?? widget.event;
+                  orElse: () => widget.event,
+                ) ??
+                widget.event;
 
             // 2. CALCULATE SLOTS
             final limit = liveEvent.registrationLimit;
@@ -232,8 +244,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               capacityLabel = '$slotsLeft slots remaining';
             }
 
-            final dateFormatted = DateFormat('EEEE, MMMM d').format(liveEvent.startTime);
-            final timeFormatted = '${DateFormat('h:mm a').format(liveEvent.startTime)} - ${DateFormat('h:mm a').format(liveEvent.endTime)}';
+            final dateFormatted =
+                DateFormat('EEEE, MMMM d').format(liveEvent.startTime);
+            final timeFormatted =
+                '${DateFormat('h:mm a').format(liveEvent.startTime)} - ${DateFormat('h:mm a').format(liveEvent.endTime)}';
 
             final isAdmin = _userRole == AppRole.admin;
             final isPending = liveEvent.approvalStatus == EventStatus.pending;
@@ -263,31 +277,37 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                             // LAYER 1: The Default (Colored Box & Icon)
                             // This is always rendered. If the image loads, it just covers this up.
                             Container(
-                              color: AppColors.primary.withOpacity(0.1), // Light version of your primary color
+                              color: AppColors.primary.withValues(alpha:
+                                  0.1), // Light version of your primary color
                               child: Center(
                                 child: Icon(
-                                  _getCategoryIcon(liveEvent.category), // Shows Music/Tech/Sports icon
+                                  _getCategoryIcon(liveEvent
+                                      .category), // Shows Music/Tech/Sports icon
                                   size: 80.sp,
-                                  color: AppColors.primary.withOpacity(0.3),
+                                  color: AppColors.primary.withValues(alpha:0.3),
                                 ),
                               ),
                             ),
 
                             // LAYER 2: The Actual Image (Supabase URL or External Link)
                             // We only try to render this if the URL exists.
-                            if (liveEvent.bannerUrl != null && liveEvent.bannerUrl!.isNotEmpty)
+                            if (liveEvent.bannerUrl != null &&
+                                liveEvent.bannerUrl!.isNotEmpty)
                               CachedNetworkImage(
                                 imageUrl: liveEvent.bannerUrl!,
                                 fit: BoxFit.cover,
 
                                 // Smooth Fade In
-                                fadeInDuration: const Duration(milliseconds: 500),
+                                fadeInDuration:
+                                    const Duration(milliseconds: 500),
 
                                 // Placeholder (keeps the background color while loading)
-                                placeholder: (context, url) => Container(color: Colors.transparent),
+                                placeholder: (context, url) =>
+                                    Container(color: Colors.transparent),
 
                                 // On Error, we just hide this layer so the default icon layer shows below
-                                errorWidget: (context, url, error) => const SizedBox(),
+                                errorWidget: (context, url, error) =>
+                                    const SizedBox(),
                               ),
 
                             // LAYER 3: Gradient Overlay
@@ -299,7 +319,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                                   end: Alignment.bottomCenter,
                                   colors: [
                                     Colors.transparent,
-                                    Colors.black.withOpacity(0.6),
+                                    Colors.black.withValues(alpha:0.6),
                                   ],
                                 ),
                               ),
@@ -329,12 +349,15 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.warning_amber, color: Colors.orange),
+                                    const Icon(Icons.warning_amber,
+                                        color: Colors.orange),
                                     SizedBox(width: 12.w),
                                     const Expanded(
                                       child: Text(
                                         "Pending Approval. Review details below.",
-                                        style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+                                        style: TextStyle(
+                                            color: Colors.orange,
+                                            fontWeight: FontWeight.bold),
                                       ),
                                     ),
                                   ],
@@ -358,9 +381,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                                 ),
                                 SizedBox(width: 12.w),
                                 Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 12.w, vertical: 6.h),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primary.withValues(alpha: 0.1),
+                                    color: AppColors.primary
+                                        .withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(20.r),
                                   ),
                                   child: Text(
@@ -388,9 +413,12 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                                 children: [
                                   CircleAvatar(
                                     radius: 20.r,
-                                    backgroundColor: AppColors.primary.withValues(alpha: 0.2),
+                                    backgroundColor: AppColors.primary
+                                        .withValues(alpha: 0.2),
                                     child: Text(
-                                      _organizerName.isNotEmpty ? _organizerName.substring(0, 1) : 'O',
+                                      _organizerName.isNotEmpty
+                                          ? _organizerName.substring(0, 1)
+                                          : 'O',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         color: AppColors.primary,
@@ -401,7 +429,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                                   SizedBox(width: 12.w),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           'Organizer',
@@ -422,7 +451,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                                     ),
                                   ),
                                   TextButton(
-                                    onPressed: () => _contactOrganizer(liveEvent.organizer), // ✅ NOW FUNCTIONAL
+                                    onPressed: () => _contactOrganizer(liveEvent
+                                        .organizer), // ✅ NOW FUNCTIONAL
                                     child: const Text('Contact'),
                                   ),
                                 ],
@@ -431,23 +461,39 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                             SizedBox(height: 24.h),
 
                             // INFO ROWS
-                            _InfoRow(icon: Icons.calendar_today_outlined, title: dateFormatted, subtitle: timeFormatted),
+                            _InfoRow(
+                                icon: Icons.calendar_today_outlined,
+                                title: dateFormatted,
+                                subtitle: timeFormatted),
                             SizedBox(height: 16.h),
-                            _InfoRow(icon: Icons.location_on_outlined, title: liveEvent.location, subtitle: 'Get Directions', isLink: true),
+                            _InfoRow(
+                                icon: Icons.location_on_outlined,
+                                title: liveEvent.location,
+                                subtitle: 'Get Directions',
+                                isLink: true),
                             SizedBox(height: 16.h),
 
                             // CAPACITY ROW
                             _InfoRow(
                               icon: Icons.people_outline,
-                              title: '${liveEvent.registeredCount} / ${liveEvent.registrationLimit ?? '∞'} Registered',
+                              title:
+                                  '${liveEvent.registeredCount} / ${liveEvent.registrationLimit ?? '∞'} Registered',
                               subtitle: capacityLabel,
                               highlightColor: isFull ? AppColors.error : null,
                             ),
 
                             SizedBox(height: 32.h),
-                            Text('About Event', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                            Text('About Event',
+                                style: TextStyle(
+                                    fontSize: 18.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textPrimary)),
                             SizedBox(height: 12.h),
-                            Text(liveEvent.description, style: TextStyle(fontSize: 15.sp, color: AppColors.textSecondary, height: 1.6)),
+                            Text(liveEvent.description,
+                                style: TextStyle(
+                                    fontSize: 15.sp,
+                                    color: AppColors.textSecondary,
+                                    height: 1.6)),
 
                             // GUIDELINES
                             if (liveEvent.guidelinesUrl != null) ...[
@@ -455,15 +501,20 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                               OutlinedButton.icon(
                                 onPressed: () {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Downloading Guidelines PDF...')),
+                                    const SnackBar(
+                                        content: Text(
+                                            'Downloading Guidelines PDF...')),
                                   );
                                 },
                                 icon: const Icon(Icons.download_rounded),
                                 label: const Text('Download Event Guidelines'),
                                 style: OutlinedButton.styleFrom(
                                   padding: EdgeInsets.symmetric(vertical: 12.h),
-                                  side: const BorderSide(color: AppColors.primary),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                                  side: const BorderSide(
+                                      color: AppColors.primary),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(12.r)),
                                 ),
                               ),
                             ],
@@ -486,108 +537,159 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, -5)),
+                        BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 20,
+                            offset: const Offset(0, -5)),
                       ],
                     ),
                     child: isAdmin && isPending
-                        ? Row( // ADMIN ACTIONS
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _isActionLoading ? null : () => _adminUpdateStatus(liveEvent, EventStatus.rejected),
-                            style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.error,
-                                side: const BorderSide(color: AppColors.error),
-                                padding: EdgeInsets.symmetric(vertical: 16.h)
-                            ),
-                            child: const Text('Reject'),
-                          ),
-                        ),
-                        SizedBox(width: 16.w),
-                        Expanded(
-                          child: FilledButton(
-                            onPressed: _isActionLoading ? null : () => _adminUpdateStatus(liveEvent, EventStatus.approved),
-                            style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.success,
-                                padding: EdgeInsets.symmetric(vertical: 16.h)
-                            ),
-                            child: _isActionLoading
-                                ? const CircularProgressIndicator(color: Colors.white)
-                                : const Text('Approve'),
-                          ),
-                        ),
-                      ],
-                    )
-                        : Row( // STUDENT ACTIONS
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.border),
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          child: IconButton(
-                            icon: Icon(_isFavorite ? Icons.favorite : Icons.favorite_border, color: _isFavorite ? Colors.pink : AppColors.textSecondary),
-                            onPressed: _toggleFavorite,
-                          ),
-                        ),
-                        SizedBox(width: 16.w),
-                        Expanded(
-                          child: _userId == null
-                              ? const SizedBox()
-                              : StreamBuilder<List<String>>(
-                            stream: _eventRepository.getRegisteredEventIdsStream(_userId!),
-                            initialData: const [],
-                            builder: (context, snapshot) {
-                              final isRegistered = snapshot.data?.contains(liveEvent.id) ?? false;
-                              final isDisabled = isFull && !isRegistered;
-
-                              return SizedBox(
-                                height: 56.h,
-                                child: FilledButton(
-                                  // Disable button for Admins (they don't register) or if full
-                                  onPressed: (_isActionLoading || isDisabled || isAdmin)
+                        ? Row(
+                            // ADMIN ACTIONS
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: _isActionLoading
                                       ? null
-                                      : () => _handleRegistrationAction(isRegistered),
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: isRegistered
-                                        ? Colors.white
-                                        : (isDisabled || isAdmin ? Colors.grey : AppColors.primary),
-                                    foregroundColor: isRegistered ? AppColors.error : Colors.white,
-                                    side: isRegistered ? const BorderSide(color: AppColors.error) : null,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-                                  ),
-                                  child: _isActionLoading
-                                      ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                                      : Text(
-                                    isAdmin
-                                        ? 'Admin View'
-                                        : (isRegistered
-                                        ? 'Cancel Registration'
-                                        : (isDisabled ? 'Event Full' : 'Register Now')),
-                                    style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
-                                  ),
+                                      : () => _adminUpdateStatus(
+                                          liveEvent, EventStatus.rejected),
+                                  style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.error,
+                                      side: const BorderSide(
+                                          color: AppColors.error),
+                                      padding:
+                                          EdgeInsets.symmetric(vertical: 16.h)),
+                                  child: const Text('Reject'),
                                 ),
-                              );
-                            },
+                              ),
+                              SizedBox(width: 16.w),
+                              Expanded(
+                                child: FilledButton(
+                                  onPressed: _isActionLoading
+                                      ? null
+                                      : () => _adminUpdateStatus(
+                                          liveEvent, EventStatus.approved),
+                                  style: FilledButton.styleFrom(
+                                      backgroundColor: AppColors.success,
+                                      padding:
+                                          EdgeInsets.symmetric(vertical: 16.h)),
+                                  child: _isActionLoading
+                                      ? const CircularProgressIndicator(
+                                          color: Colors.white)
+                                      : const Text('Approve'),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Row(
+                            // STUDENT ACTIONS
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: AppColors.border),
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                                child: IconButton(
+                                  icon: Icon(
+                                      _isFavorite
+                                          ? Icons.favorite
+                                          : Icons.favorite_border,
+                                      color: _isFavorite
+                                          ? Colors.pink
+                                          : AppColors.textSecondary),
+                                  onPressed: _toggleFavorite,
+                                ),
+                              ),
+                              SizedBox(width: 16.w),
+                              Expanded(
+                                child: _userId == null
+                                    ? const SizedBox()
+                                    : StreamBuilder<List<String>>(
+                                        stream: _eventRepository
+                                            .getRegisteredEventIdsStream(
+                                                _userId!),
+                                        initialData: const [],
+                                        builder: (context, snapshot) {
+                                          final isRegistered = snapshot.data
+                                                  ?.contains(liveEvent.id) ??
+                                              false;
+                                          final isDisabled =
+                                              isFull && !isRegistered;
+
+                                          return SizedBox(
+                                            height: 56.h,
+                                            child: FilledButton(
+                                              // Disable button for Admins (they don't register) or if full
+                                              onPressed: (_isActionLoading ||
+                                                      isDisabled ||
+                                                      isAdmin)
+                                                  ? null
+                                                  : () =>
+                                                      _handleRegistrationAction(
+                                                          isRegistered),
+                                              style: FilledButton.styleFrom(
+                                                backgroundColor: isRegistered
+                                                    ? Colors.white
+                                                    : (isDisabled || isAdmin
+                                                        ? Colors.grey
+                                                        : AppColors.primary),
+                                                foregroundColor: isRegistered
+                                                    ? AppColors.error
+                                                    : Colors.white,
+                                                side: isRegistered
+                                                    ? const BorderSide(
+                                                        color: AppColors.error)
+                                                    : null,
+                                                shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            16.r)),
+                                              ),
+                                              child: _isActionLoading
+                                                  ? const SizedBox(
+                                                      height: 24,
+                                                      width: 24,
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                              strokeWidth: 2))
+                                                  : Text(
+                                                      isAdmin
+                                                          ? 'Admin View'
+                                                          : (isRegistered
+                                                              ? 'Cancel Registration'
+                                                              : (isDisabled
+                                                                  ? 'Event Full'
+                                                                  : 'Register Now')),
+                                                      style: TextStyle(
+                                                          fontSize: 16.sp,
+                                                          fontWeight:
+                                                              FontWeight.bold),
+                                                    ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
               ],
             );
-          }
-      ),
+          }),
     );
   }
 
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
-      case 'cultural': return FontAwesomeIcons.masksTheater;
-      case 'technical': return FontAwesomeIcons.laptopCode;
-      case 'sports': return FontAwesomeIcons.trophy;
-      default: return FontAwesomeIcons.calendar;
+      case 'cultural':
+        return FontAwesomeIcons.masksTheater;
+      case 'technical':
+        return FontAwesomeIcons.laptopCode;
+      case 'sports':
+        return FontAwesomeIcons.trophy;
+      default:
+        return FontAwesomeIcons.calendar;
     }
   }
 }
@@ -601,8 +703,10 @@ class _CircleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: EdgeInsets.all(8.w),
-      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.9), shape: BoxShape.circle),
-      child: IconButton(icon: Icon(icon, color: Colors.black), onPressed: onTap),
+      decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.9), shape: BoxShape.circle),
+      child:
+          IconButton(icon: Icon(icon, color: Colors.black), onPressed: onTap),
     );
   }
 }
@@ -628,22 +732,28 @@ class _InfoRow extends StatelessWidget {
       children: [
         Container(
           padding: EdgeInsets.all(10.w),
-          decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(12.r)),
+          decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(12.r)),
           child: Icon(icon, color: AppColors.primary, size: 24.sp),
         ),
         SizedBox(width: 16.w),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-            Text(
-                subtitle,
+            Text(title,
+                style: TextStyle(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary)),
+            Text(subtitle,
                 style: TextStyle(
                     fontSize: 13.sp,
-                    color: highlightColor ?? (isLink ? AppColors.primary : AppColors.textSecondary),
-                    fontWeight: (isLink || highlightColor != null) ? FontWeight.w600 : FontWeight.normal
-                )
-            ),
+                    color: highlightColor ??
+                        (isLink ? AppColors.primary : AppColors.textSecondary),
+                    fontWeight: (isLink || highlightColor != null)
+                        ? FontWeight.w600
+                        : FontWeight.normal)),
           ],
         ),
       ],

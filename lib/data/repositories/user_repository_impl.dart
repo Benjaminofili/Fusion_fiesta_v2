@@ -16,11 +16,8 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<User> getUser(String userId) async {
     try {
-      final data = await _supabase
-          .from('profiles')
-          .select()
-          .eq('id', userId)
-          .single();
+      final data =
+          await _supabase.from('profiles').select().eq('id', userId).single();
 
       return _mapToUser(data);
     } catch (e) {
@@ -35,16 +32,18 @@ class UserRepositoryImpl implements UserRepository {
         .stream(primaryKey: ['id'])
         .eq('id', userId)
         .map((data) {
-      if (data.isEmpty) return null;
-      return _mapToUser(data.first);
-    });
+          if (data.isEmpty) return null;
+          return _mapToUser(data.first);
+        });
   }
 
   @override
-  Future<User> updateUser(User user, {File? newProfileImage, File? newCollegeIdImage}) async {
+  Future<User> updateUser(User user,
+      {File? newProfileImage, File? newCollegeIdImage}) async {
     try {
       String? profileImageUrl = user.profilePictureUrl;
-      String? collegeIdPath = user.collegeIdUrl; // We store the PATH for private files
+      String? collegeIdPath =
+          user.collegeIdUrl; // We store the PATH for private files
 
       // 1. Upload Profile Picture (Public Bucket)
       if (newProfileImage != null) {
@@ -52,8 +51,7 @@ class UserRepositoryImpl implements UserRepository {
             userId: user.id,
             file: newProfileImage,
             bucketName: 'avatars',
-            folder: 'profile'
-        );
+            folder: 'profile');
       }
 
       // 2. Upload Student ID (Private Bucket)
@@ -62,8 +60,7 @@ class UserRepositoryImpl implements UserRepository {
             userId: user.id,
             file: newCollegeIdImage,
             bucketName: 'secure_docs',
-            folder: 'ids'
-        );
+            folder: 'ids');
       }
 
       // 3. Prepare data
@@ -73,7 +70,8 @@ class UserRepositoryImpl implements UserRepository {
         'department': user.department,
         'enrollment_number': user.enrolmentNumber,
         'profile_picture_url': profileImageUrl,
-        'college_id_url': collegeIdPath, // Stores the path (e.g. "user_id/ids/file.jpg")
+        'college_id_url':
+            collegeIdPath, // Stores the path (e.g. "user_id/ids/file.jpg")
         'profile_completed': true,
       };
 
@@ -137,10 +135,10 @@ class UserRepositoryImpl implements UserRepository {
       final fileName = '$userId/$folder/${const Uuid().v4()}$fileExt';
 
       await _supabase.storage.from(bucketName).upload(
-        fileName,
-        fileToUpload,
-        fileOptions: const supabase.FileOptions(upsert: true),
-      );
+            fileName,
+            fileToUpload,
+            fileOptions: const supabase.FileOptions(upsert: true),
+          );
 
       // C. Return URL or Path
       if (bucketName == 'avatars' || bucketName == 'events') {
@@ -180,7 +178,7 @@ class UserRepositoryImpl implements UserRepository {
       name: data['name'] ?? '',
       email: data['email'] ?? '',
       role: AppRole.values.firstWhere(
-            (e) => e.name == data['role'],
+        (e) => e.name == data['role'],
         orElse: () => AppRole.visitor,
       ),
       department: data['department'],

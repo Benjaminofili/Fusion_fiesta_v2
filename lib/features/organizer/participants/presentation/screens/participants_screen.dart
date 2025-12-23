@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../app/di/service_locator.dart';
@@ -22,15 +21,24 @@ class _ParticipantsScreenState extends State<ParticipantsScreen> {
   final _repository = serviceLocator<EventRepository>();
 
   Future<void> _updateStatus(Registration reg, String status) async {
+    // Capture everything BEFORE any await
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     try {
       await _repository.updateRegistrationStatus(reg.id, status);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Participant marked as $status')),
-        );
-      }
+
+      // Only use context-dependent objects after checking mounted
+      if (!mounted) return;
+
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('Participant marked as $status')),
+      );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (!mounted) return;
+
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     }
   }
 
@@ -50,8 +58,11 @@ class _ParticipantsScreenState extends State<ParticipantsScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Participants', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-            Text(widget.event.title, style: TextStyle(color: Colors.grey, fontSize: 12.sp)),
+            const Text('Participants',
+                style: TextStyle(
+                    color: Colors.black, fontWeight: FontWeight.bold)),
+            Text(widget.event.title,
+                style: TextStyle(color: Colors.grey, fontSize: 12.sp)),
           ],
         ),
         backgroundColor: Colors.white,
@@ -72,9 +83,11 @@ class _ParticipantsScreenState extends State<ParticipantsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.people_outline, size: 60.sp, color: Colors.grey[300]),
+                  Icon(Icons.people_outline,
+                      size: 60.sp, color: Colors.grey[300]),
                   SizedBox(height: 16.h),
-                  Text('No registrations yet', style: TextStyle(color: Colors.grey[500])),
+                  Text('No registrations yet',
+                      style: TextStyle(color: Colors.grey[500])),
                 ],
               ),
             );
@@ -90,7 +103,8 @@ class _ParticipantsScreenState extends State<ParticipantsScreen> {
                 registration: reg,
                 onApprove: () => _updateStatus(reg, 'approved'),
                 onReject: () => _updateStatus(reg, 'rejected'),
-                onMessage: () => _messageParticipant(reg.userId), // NEW CALLBACK
+                onMessage: () =>
+                    _messageParticipant(reg.userId), // NEW CALLBACK
               );
             },
           );
@@ -140,13 +154,16 @@ class _ParticipantTile extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12.r),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
+          BoxShadow(
+              color: Colors.black.withValues(alpha:0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2)),
         ],
       ),
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: AppColors.primary.withOpacity(0.1),
+            backgroundColor: AppColors.primary.withValues(alpha:0.1),
             child: const Icon(Icons.person, color: AppColors.primary),
           ),
           SizedBox(width: 16.w),
@@ -156,7 +173,8 @@ class _ParticipantTile extends StatelessWidget {
               children: [
                 Text(
                   'Student ID: ${registration.userId}',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp),
+                  style:
+                      TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp),
                 ),
                 Text(
                   'Reg: ${DateFormat('MMM d, h:mm a').format(registration.createdAt)}',
@@ -189,7 +207,7 @@ class _ParticipantTile extends StatelessWidget {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
+                color: statusColor.withValues(alpha:0.1),
                 borderRadius: BorderRadius.circular(8.r),
               ),
               child: Row(
@@ -198,7 +216,10 @@ class _ParticipantTile extends StatelessWidget {
                   SizedBox(width: 4.w),
                   Text(
                     registration.status.toUpperCase(),
-                    style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 10.sp),
+                    style: TextStyle(
+                        color: statusColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10.sp),
                   ),
                 ],
               ),

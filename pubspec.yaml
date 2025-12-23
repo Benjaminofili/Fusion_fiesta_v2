@@ -97,6 +97,7 @@ dependencies:
   flutter_dotenv: ^6.0.0
   timeago: ^3.7.1
 
+  path: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

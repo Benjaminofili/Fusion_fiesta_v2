@@ -72,7 +72,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back_ios_new,
+              color: AppColors.textPrimary),
           onPressed: () => context.pop(),
         ),
         title: Text(
@@ -85,49 +86,56 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primary))
           : _favoriteEvents.isEmpty
-          ? _buildEmptyState()
-          : ListView.builder(
-        padding: EdgeInsets.all(24.w),
-        itemCount: _favoriteEvents.length,
-        itemBuilder: (context, index) {
-          final event = _favoriteEvents[index];
-          return Padding(
-            padding: EdgeInsets.only(bottom: 16.h),
-            child: Stack(
-              children: [
-                EventCard(
-                  event: event,
-                  onTap: () => context.push('${AppRoutes.events}/details', extra: event),
-                ),
-                // Remove Button Overlay
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  child: GestureDetector(
-                    onTap: () => _removeFavorite(event),
-                    child: Container(
-                      padding: EdgeInsets.all(8.w),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
+              ? _buildEmptyState()
+              : ListView.builder(
+                  padding: EdgeInsets.all(24.w),
+                  itemCount: _favoriteEvents.length,
+                  itemBuilder: (context, index) {
+                    final event = _favoriteEvents[index];
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: 16.h),
+                      child: Stack(
+                        children: [
+                          EventCard(
+                            event: event,
+                            onTap: () => context.push(
+                                '${AppRoutes.events}/details',
+                                extra: event),
+                          ),
+                          // Remove Button Overlay
+                          Positioned(
+                            top: 12,
+                            left: 12,
+                            child: GestureDetector(
+                              onTap: () => _removeFavorite(event),
+                              child: Container(
+                                padding: EdgeInsets.all(8.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha:0.1),
+                                      blurRadius: 4,
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(Icons.favorite,
+                                    color: Colors.pink, size: 20),
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.favorite, color: Colors.pink, size: 20),
-                    ),
-                  ),
+                    )
+                        .animate()
+                        .fadeIn(delay: (50 * index).ms)
+                        .slideX(begin: 0.1);
+                  },
                 ),
-              ],
-            ),
-          ).animate().fadeIn(delay: (50 * index).ms).slideX(begin: 0.1);
-        },
-      ),
     );
   }
 
@@ -136,7 +144,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(FontAwesomeIcons.heartCrack, size: 60.sp, color: Colors.grey[300]),
+          Icon(FontAwesomeIcons.heartCrack,
+              size: 60.sp, color: Colors.grey[300]),
           SizedBox(height: 16.h),
           Text(
             'No saved events yet',

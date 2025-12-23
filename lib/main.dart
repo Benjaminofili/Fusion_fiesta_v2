@@ -39,10 +39,7 @@ Future<void> main() async {
 
   // 1. Check if user is ALREADY logged in (Synchronous check)
   if (authService.currentUser != null) {
-    notifService.monitorNotifications(
-        notifRepo,
-        authService.currentUser!.id
-    );
+    notifService.monitorNotifications(notifRepo, authService.currentUser!.id);
   }
 
   // 2. Listen for FUTURE login/logout events

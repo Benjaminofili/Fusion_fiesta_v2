@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../../core/constants/app_colors.dart';
 
 class OrganizerMessagesScreen extends StatelessWidget {
   const OrganizerMessagesScreen({super.key});
@@ -9,9 +8,21 @@ class OrganizerMessagesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // Mock Queries
     final queries = [
-      {'user': 'Student 101', 'msg': 'Is the laptop required for the workshop?', 'time': '10:30 AM'},
-      {'user': 'Alice Smith', 'msg': 'I cannot download my certificate.', 'time': 'Yesterday'},
-      {'user': 'Bob Jones', 'msg': 'When will the results be announced?', 'time': 'Yesterday'},
+      {
+        'user': 'Student 101',
+        'msg': 'Is the laptop required for the workshop?',
+        'time': '10:30 AM'
+      },
+      {
+        'user': 'Alice Smith',
+        'msg': 'I cannot download my certificate.',
+        'time': 'Yesterday'
+      },
+      {
+        'user': 'Bob Jones',
+        'msg': 'When will the results be announced?',
+        'time': 'Yesterday'
+      },
     ];
 
     return Scaffold(
@@ -27,11 +38,15 @@ class OrganizerMessagesScreen extends StatelessWidget {
               backgroundColor: Colors.blue[50],
               child: const Icon(Icons.person, color: Colors.blue),
             ),
-            title: Text(q['user']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(q['msg']!, maxLines: 1, overflow: TextOverflow.ellipsis),
-            trailing: Text(q['time']!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            title: Text(q['user']!,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle:
+                Text(q['msg']!, maxLines: 1, overflow: TextOverflow.ellipsis),
+            trailing: Text(q['time']!,
+                style: const TextStyle(fontSize: 12, color: Colors.grey)),
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Chat feature coming soon')));
+              ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Chat feature coming soon')));
             },
           );
         },

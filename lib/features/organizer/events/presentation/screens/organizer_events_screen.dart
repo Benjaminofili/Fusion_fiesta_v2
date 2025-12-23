@@ -17,7 +17,8 @@ class OrganizerEventsScreen extends StatefulWidget {
   State<OrganizerEventsScreen> createState() => _OrganizerEventsScreenState();
 }
 
-class _OrganizerEventsScreenState extends State<OrganizerEventsScreen> with SingleTickerProviderStateMixin {
+class _OrganizerEventsScreenState extends State<OrganizerEventsScreen>
+    with SingleTickerProviderStateMixin {
   final _repo = serviceLocator<EventRepository>();
   final _auth = serviceLocator<AuthService>();
 
@@ -35,7 +36,7 @@ class _OrganizerEventsScreenState extends State<OrganizerEventsScreen> with Sing
 
   Future<void> _loadUser() async {
     // Safely fetch user ID
-    final user = await _auth.currentUser;
+    final user = _auth.currentUser;
     if (mounted && user != null) {
       setState(() => _currentUserId = user.id);
     }
@@ -46,7 +47,8 @@ class _OrganizerEventsScreenState extends State<OrganizerEventsScreen> with Sing
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
-        title: const Text('My Events', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('My Events',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         elevation: 0,
         bottom: TabBar(
@@ -69,29 +71,33 @@ class _OrganizerEventsScreenState extends State<OrganizerEventsScreen> with Sing
       body: _currentUserId == null
           ? const Center(child: CircularProgressIndicator()) // Wait for user ID
           : StreamBuilder<List<Event>>(
-        stream: _repo.getEventsStream(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+              stream: _repo.getEventsStream(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          // FILTER LOGIC
-          final allEvents = snapshot.data!.where((e) {
-            return e.organizerId == _currentUserId ||
-                e.coOrganizers.contains(_currentUserId);
-          }).toList();
+                // FILTER LOGIC
+                final allEvents = snapshot.data!.where((e) {
+                  return e.organizerId == _currentUserId ||
+                      e.coOrganizers.contains(_currentUserId);
+                }).toList();
 
-          final now = DateTime.now();
-          final active = allEvents.where((e) => e.endTime.isAfter(now)).toList();
-          final history = allEvents.where((e) => e.endTime.isBefore(now)).toList();
+                final now = DateTime.now();
+                final active =
+                    allEvents.where((e) => e.endTime.isAfter(now)).toList();
+                final history =
+                    allEvents.where((e) => e.endTime.isBefore(now)).toList();
 
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              _EventList(events: active, isHistory: false),
-              _EventList(events: history, isHistory: true),
-            ],
-          );
-        },
-      ),
+                return TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _EventList(events: active, isHistory: false),
+                    _EventList(events: history, isHistory: true),
+                  ],
+                );
+              },
+            ),
     );
   }
 }
@@ -109,9 +115,11 @@ class _EventList extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(isHistory ? Icons.history : Icons.event_busy, size: 64, color: Colors.grey[300]),
+            Icon(isHistory ? Icons.history : Icons.event_busy,
+                size: 64, color: Colors.grey[300]),
             SizedBox(height: 16.h),
-            Text(isHistory ? 'No past events' : 'No active events', style: TextStyle(color: Colors.grey[500])),
+            Text(isHistory ? 'No past events' : 'No active events',
+                style: TextStyle(color: Colors.grey[500])),
           ],
         ),
       );
@@ -120,7 +128,7 @@ class _EventList extends StatelessWidget {
     return ListView.separated(
       padding: EdgeInsets.all(16.w),
       itemCount: events.length,
-      separatorBuilder: (_,__) => SizedBox(height: 12.h),
+      separatorBuilder: (_, __) => SizedBox(height: 12.h),
       itemBuilder: (context, index) {
         final event = events[index];
 
@@ -147,24 +155,30 @@ class _EventList extends StatelessWidget {
 
         return Card(
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r), side: BorderSide(color: AppColors.border)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              side: BorderSide(color: AppColors.border)),
           child: ListTile(
             contentPadding: EdgeInsets.all(16.w),
             title: Row(
               children: [
-                Expanded(child: Text(event.title, style: const TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(
+                    child: Text(event.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold))),
                 if (!isHistory)
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
                     decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
+                        color: statusColor.withValues(alpha:0.1),
                         borderRadius: BorderRadius.circular(4.r),
-                        border: Border.all(color: statusColor.withOpacity(0.2))
-                    ),
-                    child: Text(
-                        statusText,
-                        style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.bold, color: statusColor)
-                    ),
+                        border:
+                            Border.all(color: statusColor.withValues(alpha:0.2))),
+                    child: Text(statusText,
+                        style: TextStyle(
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.bold,
+                            color: statusColor)),
                   ),
               ],
             ),
@@ -172,7 +186,7 @@ class _EventList extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(height: 4.h),
-                Text('${DateFormat('MMM d, h:mm a').format(event.startTime)}'),
+                Text(DateFormat('MMM d, h:mm a').format(event.startTime)),
                 SizedBox(height: 4.h),
                 Row(
                   children: [
@@ -185,9 +199,11 @@ class _EventList extends StatelessWidget {
             ),
             trailing: IconButton(
               icon: const Icon(Icons.edit_outlined),
-              onPressed: () => context.push('${AppRoutes.events}/edit', extra: event),
+              onPressed: () =>
+                  context.push('${AppRoutes.events}/edit', extra: event),
             ),
-            onTap: () => context.push('${AppRoutes.events}/details', extra: event),
+            onTap: () =>
+                context.push('${AppRoutes.events}/details', extra: event),
           ),
         );
       },

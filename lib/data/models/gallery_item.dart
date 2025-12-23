@@ -13,6 +13,8 @@ class GalleryItem extends Equatable {
     required this.uploadedBy,
     required this.uploadedAt,
     this.isFavorite = false,
+    this.isHighlighted = false,
+    this.filePath,
   });
 
   final String id;
@@ -24,6 +26,8 @@ class GalleryItem extends Equatable {
   final String uploadedBy;
   final DateTime uploadedAt;
   final bool isFavorite;
+  final bool isHighlighted;
+  final String? filePath;
 
   // ✅ ADDED: Factory to parse JSON from Supabase
   factory GalleryItem.fromJson(Map<String, dynamic> json) {
@@ -32,7 +36,7 @@ class GalleryItem extends Equatable {
       eventId: json['event_id'] as String,
       // Parse string 'image'/'video' to Enum
       mediaType: MediaType.values.firstWhere(
-            (e) => e.name == (json['media_type'] as String? ?? 'image'),
+        (e) => e.name == (json['media_type'] as String? ?? 'image'),
         orElse: () => MediaType.image,
       ),
       url: json['url'] as String,
@@ -42,6 +46,8 @@ class GalleryItem extends Equatable {
       uploadedAt: DateTime.parse(json['uploaded_at'] as String),
       // 'is_favorite' might come from a join or be false by default
       isFavorite: false,
+      isHighlighted: json['is_highlighted'] as bool? ?? false,
+      filePath: json['file_path'] as String?,
     );
   }
 
@@ -55,12 +61,15 @@ class GalleryItem extends Equatable {
       'category': category,
       'uploaded_by': uploadedBy,
       'uploaded_at': uploadedAt.toIso8601String(),
+      if (filePath != null) 'file_path': filePath,
+      'is_highlighted': isHighlighted,
     };
   }
 
   GalleryItem copyWith({
     bool? isFavorite,
     String? url, // Added to update URL after upload
+    bool? isHighlighted,
   }) {
     return GalleryItem(
       id: id,
@@ -72,6 +81,8 @@ class GalleryItem extends Equatable {
       uploadedBy: uploadedBy,
       uploadedAt: uploadedAt,
       isFavorite: isFavorite ?? this.isFavorite,
+      isHighlighted: isHighlighted ?? this.isHighlighted,
+      filePath: filePath,
     );
   }
 

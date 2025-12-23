@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../../../../core/constants/app_colors.dart';
-import '../../../../../core/constants/app_sizes.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -49,7 +48,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back_ios_new,
+              color: AppColors.textPrimary),
           onPressed: () => context.pop(),
         ),
       ),
@@ -79,17 +79,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             'Forgot Password?',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
           ),
           const SizedBox(height: 8),
           Text(
             'Enter your email address and we will send you instructions to reset your password.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: AppColors.textSecondary,
-            ),
+                  color: AppColors.textSecondary,
+                ),
           ),
           const SizedBox(height: 32),
 
@@ -99,7 +99,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             keyboardType: TextInputType.emailAddress,
             decoration: InputDecoration(
               labelText: 'Email Address',
-              prefixIcon: const Icon(Icons.email_outlined, color: AppColors.textSecondary),
+              prefixIcon: const Icon(Icons.email_outlined,
+                  color: AppColors.textSecondary),
               filled: true,
               fillColor: Colors.white,
               border: OutlineInputBorder(
@@ -112,11 +113,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                borderSide:
+                    const BorderSide(color: AppColors.primary, width: 2),
               ),
             ),
-            validator: (value) =>
-            value != null && value.contains('@') ? null : 'Enter a valid email',
+            validator: (value) => value != null && value.contains('@')
+                ? null
+                : 'Enter a valid email',
           ),
           const SizedBox(height: 32),
 
@@ -134,9 +137,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               child: _isLoading
                   ? const CircularProgressIndicator(color: Colors.white)
                   : const Text(
-                'Send Reset Link',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+                      'Send Reset Link',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
             ),
           ),
         ],
@@ -149,23 +153,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Icon(Icons.mark_email_read_outlined, size: 80, color: AppColors.success),
+        const Icon(Icons.mark_email_read_outlined,
+            size: 80, color: AppColors.success),
         const SizedBox(height: 24),
         Text(
           'Check your mail',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
         ),
         const SizedBox(height: 16),
         Text(
           'We have sent a password recover instructions to your email.',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: AppColors.textSecondary,
-          ),
+                color: AppColors.textSecondary,
+              ),
         ),
         const SizedBox(height: 32),
         SizedBox(

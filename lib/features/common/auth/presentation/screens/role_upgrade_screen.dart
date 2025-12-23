@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:file_picker/file_picker.dart';
 
 import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
@@ -55,7 +54,7 @@ class _RoleUpgradeScreenState extends State<RoleUpgradeScreen> {
 
     try {
       // 1. Get Current User
-      final currentUser = await _authService.currentUser;
+      final currentUser = _authService.currentUser;
       if (currentUser == null) throw Exception('User session not found');
 
       // 2. Create Updated User Object with Participant Role
@@ -65,7 +64,8 @@ class _RoleUpgradeScreenState extends State<RoleUpgradeScreen> {
         department: _departmentController.text.trim(),
         collegeIdUrl: _collegeIdPath,
         profileCompleted: true,
-        isApproved: true, // SRS implies verification is mocked/skipped or instant
+        isApproved:
+            true, // SRS implies verification is mocked/skipped or instant
       );
 
       // 3. Update Backend
@@ -86,7 +86,6 @@ class _RoleUpgradeScreenState extends State<RoleUpgradeScreen> {
 
       // Navigate to Main Dashboard (now accessible as Student)
       context.go(AppRoutes.main);
-
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -110,9 +109,11 @@ class _RoleUpgradeScreenState extends State<RoleUpgradeScreen> {
         // but providing one allows them to go back to "Visitor Mode" (Catalog)
         leading: IconButton(
           icon: const Icon(Icons.close, color: AppColors.textPrimary),
-          onPressed: () => context.go(AppRoutes.main), // Go back to limited view
+          onPressed: () =>
+              context.go(AppRoutes.main), // Go back to limited view
         ),
-        title: const Text('Complete Profile', style: TextStyle(color: AppColors.textPrimary)),
+        title: const Text('Complete Profile',
+            style: TextStyle(color: AppColors.textPrimary)),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -129,12 +130,13 @@ class _RoleUpgradeScreenState extends State<RoleUpgradeScreen> {
                   Container(
                     padding: EdgeInsets.all(16.w),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha:0.1),
                       borderRadius: BorderRadius.circular(16.r),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.verified_user_outlined, size: 40.sp, color: AppColors.primary),
+                        Icon(Icons.verified_user_outlined,
+                            size: 40.sp, color: AppColors.primary),
                         SizedBox(width: 16.w),
                         Expanded(
                           child: Column(
@@ -165,15 +167,18 @@ class _RoleUpgradeScreenState extends State<RoleUpgradeScreen> {
 
                   Text(
                     'Academic Details',
-                    style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+                    style:
+                        TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 16.h),
 
                   // --- Enrolment Number ---
                   TextFormField(
                     controller: _enrolmentController,
-                    decoration: _inputDecoration('Enrolment Number', Icons.badge_outlined),
-                    validator: (value) => (value?.isEmpty ?? true) ? 'Required' : null,
+                    decoration: _inputDecoration(
+                        'Enrolment Number', Icons.badge_outlined),
+                    validator: (value) =>
+                        (value?.isEmpty ?? true) ? 'Required' : null,
                   ),
                   SizedBox(height: 16.h),
 
@@ -181,14 +186,17 @@ class _RoleUpgradeScreenState extends State<RoleUpgradeScreen> {
                   TextFormField(
                     controller: _departmentController,
                     textCapitalization: TextCapitalization.words,
-                    decoration: _inputDecoration('Department', Icons.school_outlined),
-                    validator: (value) => (value?.isEmpty ?? true) ? 'Required' : null,
+                    decoration:
+                        _inputDecoration('Department', Icons.school_outlined),
+                    validator: (value) =>
+                        (value?.isEmpty ?? true) ? 'Required' : null,
                   ),
                   SizedBox(height: 32.h),
 
                   Text(
                     'Verification',
-                    style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+                    style:
+                        TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 16.h),
 
@@ -214,12 +222,18 @@ class _RoleUpgradeScreenState extends State<RoleUpgradeScreen> {
                           Container(
                             padding: EdgeInsets.all(10.w),
                             decoration: BoxDecoration(
-                              color: _collegeIdPath != null ? AppColors.success.withOpacity(0.1) : Colors.grey[100],
+                              color: _collegeIdPath != null
+                                  ? AppColors.success.withValues(alpha:0.1)
+                                  : Colors.grey[100],
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
-                              _collegeIdPath != null ? Icons.check : Icons.upload_file,
-                              color: _collegeIdPath != null ? AppColors.success : AppColors.textSecondary,
+                              _collegeIdPath != null
+                                  ? Icons.check
+                                  : Icons.upload_file,
+                              color: _collegeIdPath != null
+                                  ? AppColors.success
+                                  : AppColors.textSecondary,
                             ),
                           ),
                           SizedBox(width: 16.w),
@@ -269,9 +283,10 @@ class _RoleUpgradeScreenState extends State<RoleUpgradeScreen> {
                       child: _isLoading
                           ? const CircularProgressIndicator(color: Colors.white)
                           : Text(
-                        'Upgrade to Participant',
-                        style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
-                      ),
+                              'Upgrade to Participant',
+                              style: TextStyle(
+                                  fontSize: 16.sp, fontWeight: FontWeight.bold),
+                            ),
                     ),
                   ),
                 ],

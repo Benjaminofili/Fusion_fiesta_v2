@@ -27,9 +27,11 @@ abstract class EventRepository {
   Future<void> updateEvent(Event event);
   Future<void> deleteEvent(String eventId);
   Stream<List<Registration>> getEventRegistrationsStream(String eventId);
-  Future<void> updateRegistrationStatus(String registrationId, String newStatus);
+  Future<void> updateRegistrationStatus(
+      String registrationId, String newStatus);
   Future<void> markAttendance(String eventId, String userId);
-  Future<void> broadcastAnnouncement(String eventId, String title, String message);
+  Future<void> broadcastAnnouncement(
+      String eventId, String title, String message);
   Future<List<Map<String, String>>> getCommunicationLogs();
   Future<void> submitFeedback(FeedbackEntry feedback);
   Future<List<FeedbackEntry>> getFeedbackForEvent(String eventId);

@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 import '../models/app_notification.dart';
 import 'notification_repository.dart';
 
@@ -14,9 +15,8 @@ class NotificationRepositoryImpl implements NotificationRepository {
         .stream(primaryKey: ['id'])
         .eq('user_id', userId)
         .order('created_at', ascending: false)
-        .map((data) => data
-        .map((json) => AppNotification.fromJson(json))
-        .toList());
+        .map((data) =>
+            data.map((json) => AppNotification.fromJson(json)).toList());
   }
 
   @override
@@ -24,10 +24,9 @@ class NotificationRepositoryImpl implements NotificationRepository {
     try {
       await _supabase
           .from('notifications')
-          .update({'is_read': true})
-          .eq('id', notificationId);
+          .update({'is_read': true}).eq('id', notificationId);
     } catch (e) {
-      print('Error marking notification as read: $e');
+      debugPrint('Error marking notification as read: $e');
     }
   }
 
@@ -40,7 +39,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
           .eq('user_id', userId)
           .eq('is_read', false);
     } catch (e) {
-      print('Error marking all as read: $e');
+      debugPrint('Error marking all as read: $e');
     }
   }
 
@@ -57,13 +56,9 @@ class NotificationRepositoryImpl implements NotificationRepository {
   @override
   Future<void> deleteNotification(String notificationId) async {
     try {
-      await _supabase
-          .from('notifications')
-          .delete()
-          .eq('id', notificationId);
+      await _supabase.from('notifications').delete().eq('id', notificationId);
     } catch (e) {
-      print('Error deleting notification: $e');
+      debugPrint('Error deleting notification: $e');
     }
   }
-
 }

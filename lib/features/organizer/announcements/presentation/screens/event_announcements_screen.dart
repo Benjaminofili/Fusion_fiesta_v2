@@ -12,7 +12,8 @@ class EventAnnouncementsScreen extends StatefulWidget {
   const EventAnnouncementsScreen({super.key, required this.event});
 
   @override
-  State<EventAnnouncementsScreen> createState() => _EventAnnouncementsScreenState();
+  State<EventAnnouncementsScreen> createState() =>
+      _EventAnnouncementsScreenState();
 }
 
 class _EventAnnouncementsScreenState extends State<EventAnnouncementsScreen> {
@@ -23,7 +24,8 @@ class _EventAnnouncementsScreenState extends State<EventAnnouncementsScreen> {
 
   Future<void> _sendAnnouncement() async {
     if (_titleController.text.isEmpty || _messageController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please fill all fields')));
       return;
     }
 
@@ -38,7 +40,9 @@ class _EventAnnouncementsScreenState extends State<EventAnnouncementsScreen> {
     if (mounted) {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Announcement Sent!'), backgroundColor: AppColors.success),
+        const SnackBar(
+            content: Text('Announcement Sent!'),
+            backgroundColor: AppColors.success),
       );
       context.pop();
     }
@@ -56,23 +60,27 @@ class _EventAnnouncementsScreenState extends State<EventAnnouncementsScreen> {
         child: ConstrainedBox(
           // 2. Constraints ensure full height usage but allow scrolling
           constraints: BoxConstraints(
-            minHeight: MediaQuery.of(context).size.height - kToolbarHeight - 100, // Approximate safe height
+            minHeight: MediaQuery.of(context).size.height -
+                kToolbarHeight -
+                100, // Approximate safe height
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween, // Distribute space
+            mainAxisAlignment:
+                MainAxisAlignment.spaceBetween, // Distribute space
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Notify Attendees', style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold)),
+                  Text('Notify Attendees',
+                      style: TextStyle(
+                          fontSize: 20.sp, fontWeight: FontWeight.bold)),
                   SizedBox(height: 8.h),
                   Text(
                     'Send updates about ${widget.event.title} to all registered participants.',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                   SizedBox(height: 32.h),
-
                   TextField(
                     controller: _titleController,
                     decoration: const InputDecoration(
@@ -106,7 +114,8 @@ class _EventAnnouncementsScreenState extends State<EventAnnouncementsScreen> {
                     label: _isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
                         : const Text('Send Broadcast'),
-                    style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+                    style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary),
                   ),
                 ),
               ),

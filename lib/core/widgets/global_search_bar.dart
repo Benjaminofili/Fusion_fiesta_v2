@@ -93,18 +93,19 @@ class _GlobalSearchBarState extends State<GlobalSearchBar> {
             elevation: 4.0,
             borderRadius: BorderRadius.circular(12),
             color: Colors.white,
-            shadowColor: Colors.black.withOpacity(0.1),
+            shadowColor: Colors.black.withValues(alpha:0.1),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 220), // Limit height
               child: ListView.separated(
                 padding: EdgeInsets.zero,
                 shrinkWrap: true,
                 itemCount: _suggestions.length,
-                separatorBuilder: (_,__) => const Divider(height: 1),
+                separatorBuilder: (_, __) => const Divider(height: 1),
                 itemBuilder: (context, index) {
                   final suggestion = _suggestions[index];
                   return ListTile(
-                    leading: const Icon(Icons.search, size: 20, color: Colors.grey),
+                    leading:
+                        const Icon(Icons.search, size: 20, color: Colors.grey),
                     title: Text(suggestion),
                     onTap: () {
                       _controller.text = suggestion;
@@ -141,7 +142,8 @@ class _GlobalSearchBarState extends State<GlobalSearchBar> {
           hintText: widget.hintText,
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: AppColors.border),
@@ -156,13 +158,13 @@ class _GlobalSearchBarState extends State<GlobalSearchBar> {
           ),
           suffixIcon: _controller.text.isNotEmpty
               ? IconButton(
-            icon: const Icon(Icons.clear, size: 20),
-            onPressed: () {
-              _controller.clear();
-              _removeOverlay();
-              widget.onSubmit('');
-            },
-          )
+                  icon: const Icon(Icons.clear, size: 20),
+                  onPressed: () {
+                    _controller.clear();
+                    _removeOverlay();
+                    widget.onSubmit('');
+                  },
+                )
               : null,
         ),
         onChanged: _onChanged,

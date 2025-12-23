@@ -26,24 +26,27 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     try {
       final authService = serviceLocator<AuthService>();
       await authService.changePassword(
-          _currentPassController.text,
-          _newPassController.text
-      );
+          _currentPassController.text, _newPassController.text);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Password updated! Please use new password next time.'), backgroundColor: AppColors.success),
+          const SnackBar(
+              content:
+                  Text('Password updated! Please use new password next time.'),
+              backgroundColor: AppColors.success),
         );
         context.pop();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceAll('AppFailure', '')), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text(e.toString().replaceAll('AppFailure', '')),
+              backgroundColor: AppColors.error),
         );
       }
     } finally {
-      if(mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -51,7 +54,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Change Password', style: TextStyle(color: AppColors.textPrimary)),
+        title: const Text('Change Password',
+            style: TextStyle(color: AppColors.textPrimary)),
         backgroundColor: Colors.white,
         elevation: 0,
         leading: const BackButton(color: AppColors.textPrimary),
@@ -70,7 +74,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 validator: (v) => v!.isEmpty ? 'Required' : null,
               ),
               const SizedBox(height: 16),
-
               AppTextField(
                 controller: _newPassController,
                 label: 'New Password',
@@ -79,19 +82,19 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 validator: (v) => v!.length < 6 ? 'Min 6 characters' : null,
               ),
               const SizedBox(height: 16),
-
               AppTextField(
                 controller: _confirmPassController,
                 label: 'Confirm New Password',
                 prefixIcon: Icons.lock_outline,
                 isPassword: true,
                 validator: (val) {
-                  if (val != _newPassController.text) return 'Passwords do not match';
+                  if (val != _newPassController.text) {
+                    return 'Passwords do not match';
+                  }
                   return null;
                 },
               ),
               const SizedBox(height: 32),
-
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -99,7 +102,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   onPressed: _isLoading ? null : _updatePassword,
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)

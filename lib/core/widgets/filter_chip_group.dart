@@ -30,4 +30,3 @@ class FilterChipGroup extends StatelessWidget {
     );
   }
 }
-

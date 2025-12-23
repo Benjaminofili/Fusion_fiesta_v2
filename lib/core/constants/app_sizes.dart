@@ -9,4 +9,3 @@ class AppSizes {
   static const double xxl = 48;
   static const double radius = 16;
 }
-

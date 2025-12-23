@@ -4,4 +4,3 @@ class ApiClient {
     return {'path': path};
   }
 }
-

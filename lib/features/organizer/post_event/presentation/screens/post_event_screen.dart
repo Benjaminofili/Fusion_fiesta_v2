@@ -25,7 +25,8 @@ class _PostEventScreenState extends State<PostEventScreen> {
   Future<void> _publishUpdates() async {
     // Validation
     if (_certPath == null && _resultsPath == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a file to upload.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a file to upload.')));
       return;
     }
 
@@ -41,23 +42,22 @@ class _PostEventScreenState extends State<PostEventScreen> {
 
       // 2. Broadcast Results (using existing announcement system)
       if (_resultsPath != null) {
-        await repo.broadcastAnnouncement(
-            widget.event.id,
-            'Results Published',
-            'The results and winners for ${widget.event.title} are now available!'
-        );
+        await repo.broadcastAnnouncement(widget.event.id, 'Results Published',
+            'The results and winners for ${widget.event.title} are now available!');
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Published successfully! Students notified.'), backgroundColor: AppColors.success),
+          const SnackBar(
+              content: Text('Published successfully! Students notified.'),
+              backgroundColor: AppColors.success),
         );
         context.pop();
       }
     } catch (e) {
       // ... handle error
     } finally {
-      if(mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -70,11 +70,13 @@ class _PostEventScreenState extends State<PostEventScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Event: ${widget.event.title}', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+            Text('Event: ${widget.event.title}',
+                style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
             SizedBox(height: 24.h),
 
             // 1. WINNERS
-            Text('Event Results', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600)),
+            Text('Event Results',
+                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600)),
             SizedBox(height: 8.h),
             TextField(
               controller: _winnersController,
@@ -95,9 +97,11 @@ class _PostEventScreenState extends State<PostEventScreen> {
             SizedBox(height: 32.h),
 
             // 2. CERTIFICATES
-            Text('Digital Certificates', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600)),
+            Text('Digital Certificates',
+                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600)),
             SizedBox(height: 4.h),
-            Text('Upload bulk certificates for attendees.', style: TextStyle(fontSize: 12.sp, color: Colors.grey)),
+            Text('Upload bulk certificates for attendees.',
+                style: TextStyle(fontSize: 12.sp, color: Colors.grey)),
             SizedBox(height: 12.h),
             UploadPicker(
               label: _certPath ?? 'Select Certificate Bundle (ZIP/PDF)',
@@ -113,8 +117,11 @@ class _PostEventScreenState extends State<PostEventScreen> {
               child: FilledButton.icon(
                 onPressed: _isLoading ? null : _publishUpdates,
                 icon: const Icon(Icons.publish),
-                label: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('Publish & Notify Students'),
-                style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+                label: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('Publish & Notify Students'),
+                style:
+                    FilledButton.styleFrom(backgroundColor: AppColors.primary),
               ),
             ),
           ],

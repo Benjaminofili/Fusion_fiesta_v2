@@ -18,7 +18,8 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen>
     with SingleTickerProviderStateMixin {
-  final NotificationRepository _repository = serviceLocator<NotificationRepository>();
+  final NotificationRepository _repository =
+      serviceLocator<NotificationRepository>();
   final AuthService _authService = serviceLocator<AuthService>();
   late TabController _tabController;
 
@@ -53,7 +54,8 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back_ios_new,
+              color: AppColors.textPrimary),
           onPressed: () => context.pop(),
         ),
         title: Text(
@@ -91,7 +93,8 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         stream: _repository.getNotificationsStream(_currentUserId!),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+            return const Center(
+                child: CircularProgressIndicator(color: AppColors.primary));
           }
 
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -103,7 +106,8 @@ class _NotificationsScreenState extends State<NotificationsScreen>
               .where((n) => !_pendingDeletions.contains(n.id))
               .toList();
 
-          final unreadNotifications = allNotifications.where((n) => !n.isRead).toList();
+          final unreadNotifications =
+              allNotifications.where((n) => !n.isRead).toList();
 
           // Double check if list is empty after filtering
           if (allNotifications.isEmpty) {
@@ -127,9 +131,11 @@ class _NotificationsScreenState extends State<NotificationsScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.notifications_off_outlined, size: 60.sp, color: Colors.grey[300]),
+          Icon(Icons.notifications_off_outlined,
+              size: 60.sp, color: Colors.grey[300]),
           SizedBox(height: 16.h),
-          Text('No notifications', style: TextStyle(color: Colors.grey[500], fontSize: 16.sp)),
+          Text('No notifications',
+              style: TextStyle(color: Colors.grey[500], fontSize: 16.sp)),
         ],
       ),
     );
@@ -164,21 +170,24 @@ class _NotificationsScreenState extends State<NotificationsScreen>
             });
 
             // 2. Show SnackBar with Undo
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Notification deleted'),
-                duration: const Duration(seconds: 4),
-                action: SnackBarAction(
-                  label: 'Undo',
-                  onPressed: () {
-                    // 3. UNDO: Un-hide it locally
-                    setState(() {
-                      _pendingDeletions.remove(item.id);
-                    });
-                  },
-                ),
-              ),
-            ).closed.then((reason) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(
+                  SnackBar(
+                    content: const Text('Notification deleted'),
+                    duration: const Duration(seconds: 4),
+                    action: SnackBarAction(
+                      label: 'Undo',
+                      onPressed: () {
+                        // 3. UNDO: Un-hide it locally
+                        setState(() {
+                          _pendingDeletions.remove(item.id);
+                        });
+                      },
+                    ),
+                  ),
+                )
+                .closed
+                .then((reason) {
               // 4. COMMIT: If SnackBar closed and NOT by clicking Undo...
               if (reason != SnackBarClosedReason.action) {
                 // ...actually delete from DB
@@ -216,14 +225,16 @@ class _NotificationCard extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: notification.isRead ? Colors.white : AppColors.primary.withOpacity(0.05),
+          color: notification.isRead
+              ? Colors.white
+              : AppColors.primary.withValues(alpha:0.05),
           borderRadius: BorderRadius.circular(12.r),
           border: notification.isRead
               ? Border.all(color: Colors.transparent)
-              : Border.all(color: AppColors.primary.withOpacity(0.2)),
+              : Border.all(color: AppColors.primary.withValues(alpha:0.2)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha:0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -239,7 +250,9 @@ class _NotificationCard extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                notification.isRead ? Icons.notifications_none : Icons.notifications_active,
+                notification.isRead
+                    ? Icons.notifications_none
+                    : Icons.notifications_active,
                 color: notification.isRead ? Colors.grey : AppColors.primary,
                 size: 20.sp,
               ),

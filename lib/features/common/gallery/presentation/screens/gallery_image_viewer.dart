@@ -6,7 +6,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../app/di/service_locator.dart';
-import '../../../../../core/constants/app_colors.dart';
 import '../../../../../data/models/gallery_item.dart';
 import '../../../../../data/repositories/event_repository.dart';
 
@@ -33,31 +32,29 @@ class _GalleryImageViewerState extends State<GalleryImageViewer> {
   }
 
   Future<void> _loadOrganizerName() async {
-    if (widget.item.uploadedBy != null) {
-      try {
-        // FIX: Explicitly handle nullable string return
-        final String? name = await serviceLocator<EventRepository>().getOrganizerName(widget.item.uploadedBy!);
+    try {
+      // FIX: Explicitly handle nullable string return
+      final String? name = await serviceLocator<EventRepository>()
+          .getOrganizerName(widget.item.uploadedBy);
 
-        if (mounted) {
-          setState(() {
-            // Use 'Unknown' if the name comes back null
-            _organizerName = name ?? 'Unknown';
-          });
-        }
-      } catch (e) {
-        if (mounted) setState(() => _organizerName = 'Unknown');
+      if (mounted) {
+        setState(() {
+          // Use 'Unknown' if the name comes back null
+          _organizerName = name ?? 'Unknown';
+        });
       }
-    } else {
-      if (mounted) setState(() => _organizerName = 'Organizer');
+    } catch (e) {
+      if (mounted) setState(() => _organizerName = 'Unknown');
     }
-  }
+    }
 
   void _toggleLike() {
     setState(() => _isLiked = !_isLiked);
     // TODO: Call repository to save/unsave to 'gallery_favorites'
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(_isLiked ? 'Saved to favorites' : 'Removed from favorites'),
+        content:
+            Text(_isLiked ? 'Saved to favorites' : 'Removed from favorites'),
         duration: const Duration(seconds: 1),
       ),
     );
@@ -84,10 +81,11 @@ class _GalleryImageViewerState extends State<GalleryImageViewer> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha:0.3),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+            child: const Icon(Icons.arrow_back_ios_new,
+                color: Colors.white, size: 20),
           ),
           onPressed: () => context.pop(),
         ),
@@ -96,14 +94,11 @@ class _GalleryImageViewerState extends State<GalleryImageViewer> {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha:0.3),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                  _showInfo ? Icons.visibility : Icons.visibility_off,
-                  color: Colors.white,
-                  size: 20
-              ),
+              child: Icon(_showInfo ? Icons.visibility : Icons.visibility_off,
+                  color: Colors.white, size: 20),
             ),
             onPressed: () => setState(() => _showInfo = !_showInfo),
           ),
@@ -125,7 +120,8 @@ class _GalleryImageViewerState extends State<GalleryImageViewer> {
                 child: CircularProgressIndicator(
                   value: event == null
                       ? null
-                      : event.cumulativeBytesLoaded / (event.expectedTotalBytes ?? 1),
+                      : event.cumulativeBytesLoaded /
+                          (event.expectedTotalBytes ?? 1),
                   color: Colors.white,
                 ),
               ),
@@ -135,7 +131,8 @@ class _GalleryImageViewerState extends State<GalleryImageViewer> {
                   children: [
                     Icon(Icons.broken_image, color: Colors.grey, size: 64),
                     SizedBox(height: 8),
-                    Text("Could not load image", style: TextStyle(color: Colors.grey)),
+                    Text("Could not load image",
+                        style: TextStyle(color: Colors.grey)),
                   ],
                 ),
               ),
@@ -155,8 +152,8 @@ class _GalleryImageViewerState extends State<GalleryImageViewer> {
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
                     colors: [
-                      Colors.black.withOpacity(0.9),
-                      Colors.black.withOpacity(0.6),
+                      Colors.black.withValues(alpha:0.9),
+                      Colors.black.withValues(alpha:0.6),
                       Colors.transparent,
                     ],
                   ),
@@ -176,7 +173,7 @@ class _GalleryImageViewerState extends State<GalleryImageViewer> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  item.category ?? 'Event Photo',
+                                  item.category.isNotEmpty ? item.category : 'Event Photo',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 18.sp,
@@ -186,16 +183,21 @@ class _GalleryImageViewerState extends State<GalleryImageViewer> {
                                 SizedBox(height: 4.h),
                                 Row(
                                   children: [
-                                    Icon(Icons.person, color: Colors.white70, size: 12.sp),
+                                    Icon(Icons.person,
+                                        color: Colors.white70, size: 12.sp),
                                     SizedBox(width: 4.w),
                                     Text(
                                       _organizerName,
-                                      style: TextStyle(color: Colors.white70, fontSize: 12.sp),
+                                      style: TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 12.sp),
                                     ),
                                     SizedBox(width: 8.w),
                                     Text(
                                       dateFormat.format(item.uploadedAt),
-                                      style: TextStyle(color: Colors.white70, fontSize: 12.sp),
+                                      style: TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 12.sp),
                                     ),
                                   ],
                                 ),
@@ -207,14 +209,17 @@ class _GalleryImageViewerState extends State<GalleryImageViewer> {
                             children: [
                               IconButton(
                                 icon: Icon(
-                                  _isLiked ? Icons.favorite : Icons.favorite_border,
+                                  _isLiked
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
                                   color: _isLiked ? Colors.red : Colors.white,
                                   size: 24.sp,
                                 ),
                                 onPressed: _toggleLike,
                               ),
                               IconButton(
-                                icon: Icon(Icons.share, color: Colors.white, size: 24.sp),
+                                icon: Icon(Icons.share,
+                                    color: Colors.white, size: 24.sp),
                                 onPressed: _shareImage,
                               ),
                             ],
@@ -223,15 +228,14 @@ class _GalleryImageViewerState extends State<GalleryImageViewer> {
                       ),
 
                       // Caption Section
-                      if (item.caption != null && item.caption!.isNotEmpty) ...[
+                      if (item.caption.isNotEmpty) ...[
                         SizedBox(height: 12.h),
                         Text(
-                          item.caption!,
+                          item.caption,
                           style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha:0.9),
                               fontSize: 14.sp,
-                              height: 1.4
-                          ),
+                              height: 1.4),
                           maxLines: 4,
                           overflow: TextOverflow.ellipsis,
                         ),

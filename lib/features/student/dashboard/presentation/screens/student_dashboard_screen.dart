@@ -87,11 +87,15 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         final user = userSnapshot.data;
 
         final registeredIdsStream = user != null
-            ? _eventRepository.getRegisteredEventIdsStream(user.id).asBroadcastStream()
+            ? _eventRepository
+                .getRegisteredEventIdsStream(user.id)
+                .asBroadcastStream()
             : const Stream<List<String>>.empty();
 
         final favoriteIdsStream = user != null
-            ? _eventRepository.getFavoriteEventIdsStream(user.id).asBroadcastStream()
+            ? _eventRepository
+                .getFavoriteEventIdsStream(user.id)
+                .asBroadcastStream()
             : const Stream<List<String>>.empty();
 
         return Scaffold(
@@ -128,7 +132,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   stream: _eventsStream,
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
-                      return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()));
+                      return const SliverToBoxAdapter(
+                          child: Center(child: CircularProgressIndicator()));
                     }
 
                     final now = DateTime.now();
@@ -144,7 +149,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       return SliverToBoxAdapter(
                         child: Padding(
                           padding: EdgeInsets.all(24.w),
-                          child: const Center(child: Text("No upcoming events right now.")),
+                          child: const Center(
+                              child: Text("No upcoming events right now.")),
                         ),
                       );
                     }
@@ -163,12 +169,15 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                         // Upcoming Events Section
                         _buildUpcomingEventsHeader(context),
                         ...upcomingEvents.map((event) => Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
-                          child: EventCard(
-                            event: event,
-                            onTap: () => context.push('${AppRoutes.events}/details', extra: event),
-                          ),
-                        ).animate().fadeIn().slideY(begin: 0.1)),
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 24.w, vertical: 8.h),
+                              child: EventCard(
+                                event: event,
+                                onTap: () => context.push(
+                                    '${AppRoutes.events}/details',
+                                    extra: event),
+                              ),
+                            ).animate().fadeIn().slideY(begin: 0.1)),
 
                         SizedBox(height: 100.h),
                       ]),
@@ -203,12 +212,14 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16.r),
-              border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 1),
-              color: AppColors.primary.withOpacity(0.05),
+              border: Border.all(
+                  color: AppColors.primary.withValues(alpha:0.3), width: 1),
+              color: AppColors.primary.withValues(alpha:0.05),
             ),
             child: EventCard(
               event: event,
-              onTap: () => context.push('${AppRoutes.events}/details', extra: event),
+              onTap: () =>
+                  context.push('${AppRoutes.events}/details', extra: event),
             ),
           ),
           SizedBox(height: 24.h),
@@ -277,7 +288,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     Text(
                       'Welcome back,',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha:0.9),
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w500,
                       ),
@@ -298,12 +309,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               ),
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha:0.15),
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
                   icon: const NotificationBadge(
-                    child: Icon(Icons.notifications_outlined, color: Colors.white),
+                    child:
+                        Icon(Icons.notifications_outlined, color: Colors.white),
                   ),
                   iconSize: 24.sp,
                   onPressed: () => context.push(AppRoutes.notifications),
@@ -317,10 +329,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   }
 
   Widget _buildQuickAccessSection(
-      BuildContext context,
-      Stream<List<String>> registeredStream,
-      Stream<List<String>> favoriteStream,
-      ) {
+    BuildContext context,
+    Stream<List<String>> registeredStream,
+    Stream<List<String>> favoriteStream,
+  ) {
     return SizedBox(
       height: 110.h,
       child: ListView(
@@ -406,7 +418,7 @@ class _QuickAccessCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha:0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),

@@ -2,10 +2,8 @@
 
 import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
-import 'package:uuid/uuid.dart';
 
 import '../../core/errors/app_failure.dart';
-import '../../core/utils/formatters.dart';
 import '../models/certificate.dart';
 import '../models/event.dart';
 import '../models/registration.dart';
@@ -23,8 +21,9 @@ class EventRepositoryImpl implements EventRepository {
         .from('events')
         .stream(primaryKey: ['id'])
         .order('start_time', ascending: true)
-        .map((data) {return data.map((json) => _mapToEvent(json)).toList();
-    });
+        .map((data) {
+          return data.map((json) => _mapToEvent(json)).toList();
+        });
   }
 
   @override
@@ -127,7 +126,11 @@ class EventRepositoryImpl implements EventRepository {
           .maybeSingle();
 
       if (exists != null) {
-        await _supabase.from('favorites').delete().eq('user_id', userId).eq('event_id', eventId);
+        await _supabase
+            .from('favorites')
+            .delete()
+            .eq('user_id', userId)
+            .eq('event_id', eventId);
       } else {
         await _supabase.from('favorites').insert({
           'user_id': userId,
@@ -189,8 +192,11 @@ class EventRepositoryImpl implements EventRepository {
   }
 
   @override
-  Future<void> updateRegistrationStatus(String registrationId, String newStatus) async {
-    await _supabase.from('registrations').update({'status': newStatus}).eq('id', registrationId);
+  Future<void> updateRegistrationStatus(
+      String registrationId, String newStatus) async {
+    await _supabase
+        .from('registrations')
+        .update({'status': newStatus}).eq('id', registrationId);
   }
 
   @override
@@ -217,7 +223,8 @@ class EventRepositoryImpl implements EventRepository {
   // --- PLACEHOLDERS (Future Enhancements) ---
 
   @override
-  Future<void> broadcastAnnouncement(String eventId, String title, String message) async {}
+  Future<void> broadcastAnnouncement(
+      String eventId, String title, String message) async {}
 
   @override
   Future<List<Map<String, String>>> getCommunicationLogs() async => [];
@@ -236,7 +243,8 @@ class EventRepositoryImpl implements EventRepository {
   Future<List<FeedbackEntry>> getFeedbackForEvent(String eventId) async => [];
 
   @override
-  Future<void> generateCertificatesForEvent(String eventId, String fileUrl) async {}
+  Future<void> generateCertificatesForEvent(
+      String eventId, String fileUrl) async {}
 
   @override
   Future<List<Certificate>> getUserCertificates(String userId) async {
@@ -253,7 +261,7 @@ class EventRepositoryImpl implements EventRepository {
     }
   }
 
-
+  @override
   Future<String> getOrganizerName(String userId) async {
     try {
       final data = await _supabase
@@ -293,7 +301,7 @@ class EventRepositoryImpl implements EventRepository {
       registrationLimit: data['registration_limit'],
       registeredCount: data['registered_count'] ?? 0,
       approvalStatus: EventStatus.values.firstWhere(
-            (e) => e.name == data['approval_status'],
+        (e) => e.name == data['approval_status'],
         orElse: () => EventStatus.pending,
       ),
     );
@@ -305,7 +313,6 @@ class EventRepositoryImpl implements EventRepository {
     return id;
   }
 
-
   Map<String, dynamic> _mapToEventJson(Event event) {
     return {
       'title': event.title,
@@ -314,7 +321,8 @@ class EventRepositoryImpl implements EventRepository {
       'start_time': event.startTime.toIso8601String(),
       'end_time': event.endTime.toIso8601String(),
       'location': event.location,
-      'organizer_id': event.organizer,
+      // Store organizer id (not name) to satisfy RLS & FK
+      'organizer_id': event.organizerId,
       'banner_url': event.bannerUrl,
       'registration_limit': event.registrationLimit,
       'approval_status': event.approvalStatus.name,

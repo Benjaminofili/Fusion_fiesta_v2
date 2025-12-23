@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:url_launcher/url_launcher.dart'; // Make sure to add this to pubspec.yaml if not present
+// Make sure to add this to pubspec.yaml if not present
 // If url_launcher isn't added yet, we will fallback to a simulated Snackbar action.
 
 import '../../../../../core/constants/app_colors.dart';
@@ -34,9 +34,11 @@ class ContactScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Get in Touch', style: TextStyle(fontSize: 24.sp, fontWeight: FontWeight.bold)),
+            Text('Get in Touch',
+                style: TextStyle(fontSize: 24.sp, fontWeight: FontWeight.bold)),
             SizedBox(height: 8.h),
-            Text('We are here to help you with any questions.', style: TextStyle(color: Colors.grey[600])),
+            Text('We are here to help you with any questions.',
+                style: TextStyle(color: Colors.grey[600])),
 
             SizedBox(height: 32.h),
 
@@ -48,7 +50,8 @@ class ContactScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20.r),
                 image: const DecorationImage(
                   // Use a static map image or a placeholder that looks like one
-                  image: NetworkImage('https://maps.googleapis.com/maps/api/staticmap?center=University&zoom=14&size=600x300&sensor=false'), // Example URL or asset
+                  image: NetworkImage(
+                      'https://maps.googleapis.com/maps/api/staticmap?center=University&zoom=14&size=600x300&sensor=false'), // Example URL or asset
                   fit: BoxFit.cover,
                 ),
                 color: Colors.blue[50], // Fallback
@@ -56,7 +59,9 @@ class ContactScreen extends StatelessWidget {
               child: Stack(
                 children: [
                   // Fallback icon if image fails
-                  const Center(child: Icon(Icons.map, size: 50, color: Colors.blueAccent)),
+                  const Center(
+                      child:
+                          Icon(Icons.map, size: 50, color: Colors.blueAccent)),
 
                   // Gradient
                   Container(
@@ -65,7 +70,10 @@ class ContactScreen extends StatelessWidget {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Colors.black.withOpacity(0.6)],
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha:0.6)
+                        ],
                       ),
                     ),
                   ),
@@ -81,8 +89,14 @@ class ContactScreen extends StatelessWidget {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Main Campus', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16.sp)),
-                            Text('Aptech Limited', style: TextStyle(color: Colors.white70, fontSize: 12.sp)),
+                            Text('Main Campus',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16.sp)),
+                            Text('Aptech Limited',
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 12.sp)),
                           ],
                         ),
                         ElevatedButton.icon(
@@ -92,7 +106,8 @@ class ContactScreen extends StatelessWidget {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20)),
                           ),
                         ),
                       ],
@@ -119,11 +134,13 @@ class ContactScreen extends StatelessWidget {
               height: 50.h,
               child: FilledButton(
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Message Sent!')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Message Sent!')));
                 },
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r)),
                 ),
                 child: const Text('Send Message'),
               ),
@@ -139,8 +156,12 @@ class ContactScreen extends StatelessWidget {
       labelText: label,
       filled: true,
       fillColor: Colors.white,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r), borderSide: BorderSide(color: Colors.grey.shade300)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r), borderSide: BorderSide(color: Colors.grey.shade300)),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(color: Colors.grey.shade300)),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(color: Colors.grey.shade300)),
     );
   }
 }

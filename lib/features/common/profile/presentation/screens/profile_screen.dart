@@ -33,7 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadUser() async {
-    final user = await _authService.currentUser;
+    final user = _authService.currentUser;
     if (mounted) setState(() => _currentUser = user);
   }
 
@@ -60,13 +60,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-                  Text('Manage what alerts you receive', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                  Text('Manage what alerts you receive',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12)),
                   const SizedBox(height: 24),
 
                   // 1. Event Updates
                   SwitchListTile(
                     value: storage.notifyEvents,
-                    activeColor: AppColors.primary,
+                    activeThumbColor: AppColors.primary,
                     title: const Text('Event Updates'),
                     subtitle: const Text('Schedule changes & announcements'),
                     onChanged: (val) {
@@ -80,7 +81,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // 2. Reminders
                   SwitchListTile(
                     value: storage.notifyReminders,
-                    activeColor: AppColors.primary,
+                    activeThumbColor: AppColors.primary,
                     title: const Text('Reminders'),
                     subtitle: const Text('Upcoming event alerts'),
                     onChanged: (val) {
@@ -92,7 +93,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // 3. Promotional
                   SwitchListTile(
                     value: storage.notifyPromos,
-                    activeColor: AppColors.primary,
+                    activeThumbColor: AppColors.primary,
                     title: const Text('Promotional Alerts'),
                     subtitle: const Text('Marketing & offers'),
                     onChanged: (val) {
@@ -158,21 +159,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     tag: 'profile_pic',
                     child: CircleAvatar(
                       radius: 50,
-                      backgroundColor: AppColors.primary.withOpacity(0.1),
-                      backgroundImage: _getProfileImage(_currentUser?.profilePictureUrl),
+                      backgroundColor: AppColors.primary.withValues(alpha:0.1),
+                      backgroundImage:
+                          _getProfileImage(_currentUser?.profilePictureUrl),
                       child: _currentUser?.profilePictureUrl == null
-                          ? const Icon(Icons.person, size: 50, color: AppColors.primary)
+                          ? const Icon(Icons.person,
+                              size: 50, color: AppColors.primary)
                           : null,
                     ),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     _currentUser?.name ?? 'User',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context)
+                        .textTheme
+                        .headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   Text(
                     _currentUser?.email ?? 'No email',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: Colors.grey),
                   ),
                   const SizedBox(height: 8),
                   Chip(
@@ -180,7 +189,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _currentUser?.role.name.toUpperCase() ?? 'UNKNOWN',
                       style: const TextStyle(fontSize: 12),
                     ),
-                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    backgroundColor: AppColors.primary.withValues(alpha:0.1),
                     labelStyle: const TextStyle(
                       color: AppColors.primary,
                       fontWeight: FontWeight.bold,
@@ -203,7 +212,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha:0.05),
                       blurRadius: 10,
                     )
                   ],
@@ -236,7 +245,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha:0.05),
                     blurRadius: 10,
                   )
                 ],
@@ -283,8 +292,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       icon: Icons.calendar_month,
                       title: 'My Calendar',
                       onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Use the "My Events" tab below to manage.'))
-                      ),
+                          const SnackBar(
+                              content: Text(
+                                  'Use the "My Events" tab below to manage.'))),
                     ),
                     _MenuTile(
                       icon: Icons.event_note,
@@ -304,7 +314,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _MenuTile(
                     icon: Icons.lock_outline,
                     title: 'Change Password',
-                    onTap: () => context.push('${AppRoutes.profile}/change-password'),
+                    onTap: () =>
+                        context.push('${AppRoutes.profile}/change-password'),
                   ),
                   const _DividerLine(),
                   _MenuTile(
@@ -348,12 +359,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: Text(
                 'DEVELOPER ACTIONS (TESTING ONLY)',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[400], letterSpacing: 1.5),
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[400],
+                    letterSpacing: 1.5),
               ),
             ),
             ListTile(
               tileColor: Colors.grey[100],
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               leading: const Icon(Icons.delete_forever, color: Colors.orange),
               title: const Text('Reset App State'),
               subtitle: const Text('Clears all storage & flags'),
@@ -362,7 +378,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 await storage.clearAll();
                 await _authService.signOut();
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('App Reset. Restarting...')));
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text('App Reset. Restarting...')));
                   context.go(AppRoutes.splash);
                 }
               },
@@ -370,18 +387,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 12),
             ListTile(
               tileColor: Colors.blue[50],
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              leading: const Icon(Icons.notifications_active, color: AppColors.primary),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              leading: const Icon(Icons.notifications_active,
+                  color: AppColors.primary),
               title: const Text('Simulate Server Alert'),
               subtitle: const Text('Triggers a "Push" Notification'),
               onTap: () async {
                 final notifService = serviceLocator<NotificationService>();
                 await notifService.showNotification(
                     title: 'New Announcement',
-                    body: 'Please check the Communication Log for details.'
-                );
+                    body: 'Please check the Communication Log for details.');
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notification Sent!')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Notification Sent!')));
                 }
               },
             ),
@@ -404,7 +423,8 @@ class _SectionHeader extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: Text(
         title,
-        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey[600]),
+        style: TextStyle(
+            fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey[600]),
       ),
     );
   }
@@ -414,7 +434,8 @@ class _ProfileRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  const _ProfileRow({required this.icon, required this.label, required this.value});
+  const _ProfileRow(
+      {required this.icon, required this.label, required this.value});
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -425,8 +446,11 @@ class _ProfileRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-              Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+              Text(label,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+              Text(value,
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w500)),
             ],
           ),
         ),
@@ -439,13 +463,16 @@ class _MenuTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final VoidCallback onTap;
-  const _MenuTile({required this.icon, required this.title, required this.onTap});
+  const _MenuTile(
+      {required this.icon, required this.title, required this.onTap});
   @override
   Widget build(BuildContext context) {
     return ListTile(
       leading: Icon(icon, size: 20, color: AppColors.textSecondary),
-      title: Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+      title: Text(title,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+      trailing:
+          const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
       onTap: onTap,
     );
   }

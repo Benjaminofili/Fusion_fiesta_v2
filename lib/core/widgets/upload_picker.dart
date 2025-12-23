@@ -2,7 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../constants/app_sizes.dart';
+import '../constants/app_sizes.dart'; //
 
 typedef UploadPickerCallback = void Function(PlatformFile file);
 
@@ -13,14 +13,14 @@ class UploadPicker extends StatelessWidget {
     required this.allowedExtensions,
     required this.onFileSelected,
     this.icon = Icons.upload_file,
-    this.customChild, // <--- NEW: Allow custom UI
+    this.customChild,
   });
 
   final String label;
   final List<String> allowedExtensions;
   final UploadPickerCallback onFileSelected;
   final IconData icon;
-  final Widget? customChild; // <--- NEW
+  final Widget? customChild;
 
   Future<void> _pickFile(BuildContext context) async {
     try {
@@ -28,7 +28,6 @@ class UploadPicker extends StatelessWidget {
       if (allowedExtensions.contains('jpg') ||
           allowedExtensions.contains('png') ||
           allowedExtensions.contains('jpeg')) {
-
         final imagePicker = ImagePicker();
         final file = await imagePicker.pickImage(source: ImageSource.gallery);
 
@@ -51,13 +50,14 @@ class UploadPicker extends StatelessWidget {
       );
 
       if (result != null && result.files.isNotEmpty) {
-        // Ensure path is not null (can happen on web, but we are mobile focused)
         if (result.files.first.path != null) {
           onFileSelected(result.files.first);
         }
       }
     } catch (e) {
-      // Simple error handling
+      // FIX: Check if the widget is still on screen before using 'context'
+      if (!context.mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to pick file: $e')),
       );
@@ -66,7 +66,6 @@ class UploadPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // CASE A: Custom UI (Like your Avatar or ID Tile)
     if (customChild != null) {
       return GestureDetector(
         onTap: () => _pickFile(context),
@@ -74,7 +73,6 @@ class UploadPicker extends StatelessWidget {
       );
     }
 
-    // CASE B: Default UI (Standard Button)
     return OutlinedButton.icon(
       onPressed: () => _pickFile(context),
       icon: Icon(icon),

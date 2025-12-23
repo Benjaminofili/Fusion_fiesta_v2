@@ -12,7 +12,8 @@ class VerificationPendingScreen extends StatefulWidget {
   const VerificationPendingScreen({super.key});
 
   @override
-  State<VerificationPendingScreen> createState() => _VerificationPendingScreenState();
+  State<VerificationPendingScreen> createState() =>
+      _VerificationPendingScreenState();
 }
 
 class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
@@ -20,7 +21,8 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
   final UserRepository _userRepo = serviceLocator<UserRepository>();
 
   // Get current raw Auth ID (not the full user profile yet)
-  final String _currentAuthId = supabase.Supabase.instance.client.auth.currentUser?.id ?? '';
+  final String _currentAuthId =
+      supabase.Supabase.instance.client.auth.currentUser?.id ?? '';
 
   @override
   void initState() {
@@ -46,7 +48,8 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
         ),
       );
       // Logic to decide dashboard is handled by router or manually here:
-      context.go(AppRoutes.organizerDashboard); // Or Organizer dashboard based on role
+      context.go(
+          AppRoutes.organizerDashboard); // Or Organizer dashboard based on role
     }
   }
 
@@ -68,7 +71,6 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
         // Listen to the DB row in Real-time
         stream: _userRepo.getUserStream(_currentAuthId),
         builder: (context, snapshot) {
-
           // 1. Handle Loading/Errors
           if (snapshot.hasError) {
             return _buildErrorState('Connection Error: ${snapshot.error}');
@@ -94,7 +96,8 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.security_update_warning, size: 80, color: Colors.orange),
+                const Icon(Icons.security_update_warning,
+                    size: 80, color: Colors.orange),
                 const SizedBox(height: 24),
                 const Text(
                   'Verification Pending',
@@ -104,9 +107,9 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
                 const SizedBox(height: 16),
                 Text(
                   'Your Organizer account is currently under review.\n\n'
-                      'Name: ${user.name}\n'
-                      'Role: ${user.role.name.toUpperCase()}\n\n'
-                      'You will be automatically redirected here once an Admin approves your request.',
+                  'Name: ${user.name}\n'
+                  'Role: ${user.role.name.toUpperCase()}\n\n'
+                  'You will be automatically redirected here once an Admin approves your request.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.grey[600], height: 1.5),
                 ),

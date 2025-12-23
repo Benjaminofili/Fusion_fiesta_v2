@@ -83,10 +83,8 @@ class User extends Equatable {
       id: map['id'] as String,
       name: map['name'] as String,
       email: map['email'] as String,
-      role: AppRole.values.firstWhere(
-              (e) => e.name == map['role'],
-          orElse: () => AppRole.visitor
-      ),
+      role: AppRole.values.firstWhere((e) => e.name == map['role'],
+          orElse: () => AppRole.visitor),
       department: map['department'] as String?,
       mobileNumber: map['mobileNumber'] as String?,
       enrolmentNumber: map['enrolmentNumber'] as String?,

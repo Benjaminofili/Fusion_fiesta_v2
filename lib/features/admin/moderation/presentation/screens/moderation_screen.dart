@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 
 import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
-import '../../../../../core/constants/app_routes.dart';
 import '../../../../../data/models/gallery_item.dart';
 import '../../../../../data/repositories/gallery_repository.dart';
 
@@ -60,7 +59,9 @@ class _GalleryModerationTab extends StatelessWidget {
     return StreamBuilder<List<GalleryItem>>(
       stream: repo.getGalleryStream(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
         final items = snapshot.data!;
 
@@ -81,7 +82,8 @@ class _GalleryModerationTab extends StatelessWidget {
             final item = items[index];
             return Card(
               elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r)),
               clipBehavior: Clip.antiAlias,
               child: Stack(
                 fit: StackFit.expand,
@@ -89,10 +91,10 @@ class _GalleryModerationTab extends StatelessWidget {
                   Image.network(
                     item.url,
                     fit: BoxFit.cover,
-                    errorBuilder: (_,__,___) => Container(
+                    errorBuilder: (_, __, ___) => Container(
                         color: Colors.grey[200],
-                        child: const Icon(Icons.broken_image, color: Colors.grey)
-                    ),
+                        child:
+                            const Icon(Icons.broken_image, color: Colors.grey)),
                   ),
                   // Overlay Actions
                   Positioned(
@@ -106,11 +108,14 @@ class _GalleryModerationTab extends StatelessWidget {
                           backgroundColor: Colors.white,
                           child: IconButton(
                             padding: EdgeInsets.zero,
-                            icon: const Icon(Icons.star_border, size: 20, color: Colors.orange),
+                            icon: const Icon(Icons.star_border,
+                                size: 20, color: Colors.orange),
                             tooltip: 'Highlight on Home Page',
                             onPressed: () {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Item highlighted on Home Page!')),
+                                const SnackBar(
+                                    content:
+                                        Text('Item highlighted on Home Page!')),
                               );
                             },
                           ),
@@ -122,9 +127,11 @@ class _GalleryModerationTab extends StatelessWidget {
                           backgroundColor: Colors.white,
                           child: IconButton(
                             padding: EdgeInsets.zero,
-                            icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                            icon: const Icon(Icons.delete_outline,
+                                size: 20, color: Colors.red),
                             tooltip: 'Remove Content',
-                            onPressed: () => _confirmDelete(context, repo, item.id),
+                            onPressed: () =>
+                                _confirmDelete(context, repo, item.id),
                           ),
                         ),
                       ],
@@ -160,9 +167,11 @@ class _GalleryModerationTab extends StatelessWidget {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Remove Content?'),
-        content: const Text('This action cannot be undone. The media will be removed from the gallery.'),
+        content: const Text(
+            'This action cannot be undone. The media will be removed from the gallery.'),
         actions: [
-          TextButton(onPressed: () => context.pop(), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => context.pop(), child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
@@ -197,7 +206,8 @@ class _FeedbackModerationTabState extends State<_FeedbackModerationTab> {
       'id': '1',
       'user': 'Anonymous',
       'event': 'TechViz 2025',
-      'comment': 'This event was terrible and a waste of time. [Abusive Language]',
+      'comment':
+          'This event was terrible and a waste of time. [Abusive Language]',
       'reason': 'Abusive Language',
       'date': DateTime.now().subtract(const Duration(hours: 4)),
     },
@@ -217,7 +227,8 @@ class _FeedbackModerationTabState extends State<_FeedbackModerationTab> {
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(isDelete ? 'Comment deleted' : 'Comment approved and restored'),
+        content: Text(
+            isDelete ? 'Comment deleted' : 'Comment approved and restored'),
         backgroundColor: isDelete ? AppColors.error : AppColors.success,
       ),
     );
@@ -230,9 +241,11 @@ class _FeedbackModerationTabState extends State<_FeedbackModerationTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.check_circle_outline, size: 64, color: Colors.green[200]),
+            Icon(Icons.check_circle_outline,
+                size: 64, color: Colors.green[200]),
             SizedBox(height: 16.h),
-            Text('No flagged feedback pending review.', style: TextStyle(color: Colors.grey[500])),
+            Text('No flagged feedback pending review.',
+                style: TextStyle(color: Colors.grey[500])),
           ],
         ),
       );
@@ -248,8 +261,7 @@ class _FeedbackModerationTabState extends State<_FeedbackModerationTab> {
           margin: EdgeInsets.only(bottom: 12.h),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12.r),
-              side: BorderSide(color: Colors.red.withOpacity(0.3))
-          ),
+              side: BorderSide(color: Colors.red.withValues(alpha:0.3))),
           child: Padding(
             padding: EdgeInsets.all(16.w),
             child: Column(
@@ -259,14 +271,18 @@ class _FeedbackModerationTabState extends State<_FeedbackModerationTab> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                       decoration: BoxDecoration(
                         color: Colors.red[50],
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         'FLAGGED: ${item['reason']}',
-                        style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 10.sp),
+                        style: TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10.sp),
                       ),
                     ),
                     Text(
@@ -278,7 +294,8 @@ class _FeedbackModerationTabState extends State<_FeedbackModerationTab> {
                 SizedBox(height: 12.h),
                 Text(
                   '"${item['comment']}"',
-                  style: TextStyle(fontSize: 14.sp, fontStyle: FontStyle.italic),
+                  style:
+                      TextStyle(fontSize: 14.sp, fontStyle: FontStyle.italic),
                 ),
                 SizedBox(height: 8.h),
                 Text(
@@ -296,7 +313,8 @@ class _FeedbackModerationTabState extends State<_FeedbackModerationTab> {
                     SizedBox(width: 8.w),
                     FilledButton.icon(
                       onPressed: () => _handleAction(item['id'], true),
-                      style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+                      style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.error),
                       icon: const Icon(Icons.delete_forever, size: 16),
                       label: const Text('Delete'),
                     ),
@@ -318,15 +336,31 @@ class _CertificateModerationTab extends StatefulWidget {
   const _CertificateModerationTab();
 
   @override
-  State<_CertificateModerationTab> createState() => _CertificateModerationTabState();
+  State<_CertificateModerationTab> createState() =>
+      _CertificateModerationTabState();
 }
 
 class _CertificateModerationTabState extends State<_CertificateModerationTab> {
   // Mock Certificates
   final List<Map<String, String>> _certificates = [
-    {'id': 'CERT-001', 'event': 'TechViz 2025', 'uploader': 'Tech Club', 'status': 'Live'},
-    {'id': 'CERT-002', 'event': 'TechViz 2025', 'uploader': 'Tech Club', 'status': 'Error Reported'},
-    {'id': 'CERT-005', 'event': 'Cultural Night', 'uploader': 'Cultural Comm.', 'status': 'Live'},
+    {
+      'id': 'CERT-001',
+      'event': 'TechViz 2025',
+      'uploader': 'Tech Club',
+      'status': 'Live'
+    },
+    {
+      'id': 'CERT-002',
+      'event': 'TechViz 2025',
+      'uploader': 'Tech Club',
+      'status': 'Error Reported'
+    },
+    {
+      'id': 'CERT-005',
+      'event': 'Cultural Night',
+      'uploader': 'Cultural Comm.',
+      'status': 'Live'
+    },
   ];
 
   void _revokeCertificate(String id) {
@@ -343,7 +377,7 @@ class _CertificateModerationTabState extends State<_CertificateModerationTab> {
     return ListView.separated(
       padding: EdgeInsets.all(16.w),
       itemCount: _certificates.length,
-      separatorBuilder: (_,__) => SizedBox(height: 12.h),
+      separatorBuilder: (_, __) => SizedBox(height: 12.h),
       itemBuilder: (context, index) {
         final cert = _certificates[index];
         final hasError = cert['status'] == 'Error Reported';
@@ -352,8 +386,7 @@ class _CertificateModerationTabState extends State<_CertificateModerationTab> {
           tileColor: Colors.white,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12.r),
-              side: BorderSide(color: AppColors.border)
-          ),
+              side: BorderSide(color: AppColors.border)),
           leading: Container(
             padding: EdgeInsets.all(8.w),
             decoration: BoxDecoration(
@@ -365,7 +398,8 @@ class _CertificateModerationTabState extends State<_CertificateModerationTab> {
               color: hasError ? Colors.orange : Colors.blue,
             ),
           ),
-          title: Text(cert['event']!, style: const TextStyle(fontWeight: FontWeight.bold)),
+          title: Text(cert['event']!,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
           subtitle: Text('Uploaded by: ${cert['uploader']}'),
           trailing: PopupMenuButton<String>(
             onSelected: (val) {
@@ -374,11 +408,19 @@ class _CertificateModerationTabState extends State<_CertificateModerationTab> {
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: 'view',
-                child: Row(children: [Icon(Icons.visibility, size: 18), SizedBox(width: 8), Text('Preview')]),
+                child: Row(children: [
+                  Icon(Icons.visibility, size: 18),
+                  SizedBox(width: 8),
+                  Text('Preview')
+                ]),
               ),
               const PopupMenuItem(
                 value: 'revoke',
-                child: Row(children: [Icon(Icons.delete, size: 18, color: Colors.red), SizedBox(width: 8), Text('Revoke & Remove', style: TextStyle(color: Colors.red))]),
+                child: Row(children: [
+                  Icon(Icons.delete, size: 18, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text('Revoke & Remove', style: TextStyle(color: Colors.red))
+                ]),
               ),
             ],
           ),

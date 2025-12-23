@@ -10,4 +10,3 @@ class RegistrationGuardScreen extends StatelessWidget {
     );
   }
 }
-

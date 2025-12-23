@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../app/di/service_locator.dart';
@@ -10,6 +9,7 @@ import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_routes.dart';
 import '../../../../../core/constants/app_roles.dart';
 import '../../../../../core/services/auth_service.dart';
+import '../../../../../core/services/connectivity_service.dart';
 import '../../../../../data/models/user.dart';
 import '../../../../../data/repositories/user_repository.dart';
 import '../../../../../core/widgets/upload_picker.dart';
@@ -26,6 +26,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final AuthService _authService = serviceLocator<AuthService>();
   final UserRepository _userRepo = serviceLocator<UserRepository>();
+  final ConnectivityService _connectivityService =
+  serviceLocator<ConnectivityService>();
 
   // Controllers
   final _nameController = TextEditingController();
@@ -37,7 +39,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _enrolmentController = TextEditingController();
 
   // State Variables
-  AppRole _selectedRole = AppRole.visitor; // Default: Student Visitor
+  AppRole _selectedRole = AppRole.visitor;
   bool _isLoading = false;
 
   // File Placeholders
@@ -59,10 +61,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   // --- LOGIC HELPERS ---
 
-  bool get _isStaff => _selectedRole == AppRole.organizer || _selectedRole == AppRole.admin;
+  bool get _isStaff =>
+      _selectedRole == AppRole.organizer || _selectedRole == AppRole.admin;
   bool get _isStudentParticipant => _selectedRole == AppRole.student;
-
-  // FIX: Department is required for Participants AND Staff, but NOT for Visitors
   bool get _isDepartmentRequired => _isStudentParticipant || _isStaff;
 
   void _onRoleChanged(AppRole? role) {
@@ -76,7 +77,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Additional validation for file uploads
+    // 1. Check Internet
+    final isConnected = await _connectivityService.isConnected;
+
+    // FIX 1: Guard context usage after async check
+    if (!mounted) return;
+
+    if (!isConnected) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+          Text('No internet connection. Please check your WiFi or Data.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     if (_isStudentParticipant && _collegeIdPath == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please upload your College ID Proof')),
@@ -87,28 +104,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Create Initial User Object (Text Data Only)
-      // Note: ID is empty here because Supabase Auth generates it.
-      // Note: We don't pass file paths here; we upload them in Step 3.
       final newUser = User(
         id: '',
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
         role: _selectedRole,
         mobileNumber: _mobileController.text.trim(),
-        department: _isDepartmentRequired ? _departmentController.text.trim() : null,
-        enrolmentNumber: _isStudentParticipant ? _enrolmentController.text.trim() : null,
-        profilePictureUrl: null, // Will be updated after upload
-        collegeIdUrl: null,      // Will be updated after upload
+        department:
+        _isDepartmentRequired ? _departmentController.text.trim() : null,
+        enrolmentNumber:
+        _isStudentParticipant ? _enrolmentController.text.trim() : null,
+        profilePictureUrl: null,
+        collegeIdUrl: null,
         isApproved: !_isStaff,
         profileCompleted: true,
       );
 
-      // 2. Sign Up (Creates Auth User + DB Profile Row)
-      User signedUpUser = await _authService.signUp(newUser, _passwordController.text.trim());
+      // 2. Sign Up
+      User signedUpUser =
+      await _authService.signUp(newUser, _passwordController.text.trim());
 
-      // 3. Upload Files (Profile Pic & Student ID)
-      // We convert the String paths to File objects
+      // 3. Upload Files
       File? profileFile;
       if (_profilePicturePath != null) {
         profileFile = File(_profilePicturePath!);
@@ -119,35 +135,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
         idFile = File(_collegeIdPath!);
       }
 
-      // If we have files to upload, we call updateUser
       if (profileFile != null || idFile != null) {
         signedUpUser = await _userRepo.updateUser(
           signedUpUser,
           newProfileImage: profileFile,
           newCollegeIdImage: idFile,
         );
-
-        // Update local session with the new URLs/Paths
         await _authService.updateUserSession(signedUpUser);
       }
 
+      // Check mounted before navigation or success message
       if (!mounted) return;
 
-      // 4. Routing Logic
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Account created successfully!'), backgroundColor: AppColors.success),
+        const SnackBar(
+            content: Text('Account created successfully!'),
+            backgroundColor: AppColors.success),
       );
 
       if (_isStaff) {
         _showStaffApprovalDialog();
       } else {
-        // Both Visitor and Participant go to dashboard
         context.go(AppRoutes.main);
       }
     } catch (e) {
+      // FIX 2: Guard context usage inside catch block (after async failures)
+      if (!mounted) return;
+
+      final msg = e.toString().contains('AppFailure')
+          ? e.toString().replaceAll('AppFailure(', '').replaceAll(')', '')
+          : e.toString();
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Registration Failed: ${e.toString()}'),
+          content: Text(msg),
           backgroundColor: AppColors.error,
         ),
       );
@@ -186,10 +207,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back_ios_new,
+              color: AppColors.textPrimary),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Create Account', style: TextStyle(color: AppColors.textPrimary)),
+        title: const Text('Create Account',
+            style: TextStyle(color: AppColors.textPrimary)),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -203,7 +226,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // --- 1. PROFILE PICTURE (Common) ---
+                    // --- PROFILE PICTURE ---
                     Center(
                       child: Stack(
                         children: [
@@ -214,7 +237,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ? FileImage(File(_profilePicturePath!))
                                 : null,
                             child: _profilePicturePath == null
-                                ? const Icon(Icons.person, size: 50, color: AppColors.textSecondary)
+                                ? const Icon(Icons.person,
+                                size: 50, color: AppColors.textSecondary)
                                 : null,
                           ),
                           Positioned(
@@ -231,7 +255,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               customChild: CircleAvatar(
                                 radius: 18,
                                 backgroundColor: AppColors.primary,
-                                child: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                                child: const Icon(Icons.camera_alt,
+                                    size: 18, color: Colors.white),
                               ),
                             ),
                           ),
@@ -240,11 +265,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     SizedBox(height: 24.h),
 
-                    // --- 2. ROLE SELECTION ---
+                    // --- ROLE SELECTION ---
                     DropdownButtonFormField<AppRole>(
-                      value: _selectedRole,
+                      initialValue: _selectedRole,
                       isExpanded: true,
-                      decoration: _inputDecoration('Select Account Type', Icons.category),
+                      decoration: _inputDecoration(
+                          'Select Account Type', Icons.category),
                       items: const [
                         DropdownMenuItem(
                           value: AppRole.visitor,
@@ -255,7 +281,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
                             alignment: Alignment.centerLeft,
-                            child: Text('Student Participant (Register for Events)'),
+                            child: Text(
+                                'Student Participant (Register for Events)'),
                           ),
                         ),
                         DropdownMenuItem(
@@ -270,18 +297,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         padding: const EdgeInsets.only(top: 8.0, left: 12),
                         child: Text(
                           '⚠️ Staff accounts require Admin approval.',
-                          style: TextStyle(color: AppColors.warning, fontSize: 12.sp),
+                          style: TextStyle(
+                              color: AppColors.warning, fontSize: 12.sp),
                         ),
                       ),
                     SizedBox(height: 24.h),
 
-                    // --- 3. COMMON FIELDS (Name, Email, Mobile) ---
+                    // --- FIELDS ---
                     AppTextField(
                       controller: _nameController,
                       label: 'Full Name',
                       prefixIcon: Icons.person_outline,
                       textCapitalization: TextCapitalization.words,
-                      validator: (value) => (value?.length ?? 0) > 2 ? null : 'Name too short',
+                      validator: (value) =>
+                      (value?.length ?? 0) > 2 ? null : 'Name too short',
                     ),
                     SizedBox(height: 16.h),
 
@@ -291,8 +320,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       prefixIcon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
-                        if (value == null || !value.contains('@')) return 'Invalid email';
-                        if (_isStaff && !value.endsWith('.edu')) return 'Staff must use .edu email';
+                        if (value == null || !value.contains('@')) {
+                          return 'Invalid email';
+                        }
+                        if (_isStaff && !value.endsWith('.edu')) {
+                          return 'Staff must use .edu email';
+                        }
                         return null;
                       },
                     ),
@@ -303,18 +336,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       label: 'Mobile Number',
                       prefixIcon: Icons.phone_android,
                       keyboardType: TextInputType.phone,
-                      validator: (value) => (value?.length ?? 0) > 9 ? null : 'Invalid mobile number',
+                      validator: (value) => (value?.length ?? 0) > 9
+                          ? null
+                          : 'Invalid mobile number',
                     ),
                     SizedBox(height: 16.h),
 
-                    // --- 4. ROLE SPECIFIC FIELDS ---
+                    // --- ROLE SPECIFIC ---
                     if (_isDepartmentRequired) ...[
                       AppTextField(
                         controller: _departmentController,
                         label: 'Department',
                         prefixIcon: Icons.business,
                         textCapitalization: TextCapitalization.words,
-                        validator: (value) => _isDepartmentRequired && (value?.length ?? 0) < 2
+                        validator: (value) =>
+                        _isDepartmentRequired && (value?.length ?? 0) < 2
                             ? 'Department is required'
                             : null,
                       ),
@@ -323,19 +359,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     if (_isStudentParticipant) ...[
                       const Divider(height: 40),
-                      Text('Participant Verification', style: Theme.of(context).textTheme.titleMedium),
+                      Text('Participant Verification',
+                          style: Theme.of(context).textTheme.titleMedium),
                       SizedBox(height: 16.h),
-
                       AppTextField(
                         controller: _enrolmentController,
                         label: 'Enrolment Number',
                         prefixIcon: Icons.badge,
-                        validator: (value) => _isStudentParticipant && (value?.isEmpty ?? true)
+                        validator: (value) =>
+                        _isStudentParticipant && (value?.isEmpty ?? true)
                             ? 'Required'
                             : null,
                       ),
                       SizedBox(height: 16.h),
-
                       UploadPicker(
                         label: 'ID Proof',
                         allowedExtensions: const ['pdf', 'jpg', 'png'],
@@ -352,13 +388,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             color: Colors.white,
                           ),
                           child: ListTile(
-                            leading: const Icon(Icons.upload_file, color: AppColors.primary),
+                            leading: const Icon(Icons.upload_file,
+                                color: AppColors.primary),
                             title: Text(_collegeIdPath != null
                                 ? _collegeIdName ?? 'File Selected'
                                 : 'Upload College ID Proof'),
-                            subtitle: const Text('Required for event registration'),
+                            subtitle:
+                            const Text('Required for event registration'),
                             trailing: _collegeIdPath != null
-                                ? const Icon(Icons.check_circle, color: AppColors.success)
+                                ? const Icon(Icons.check_circle,
+                                color: AppColors.success)
                                 : null,
                           ),
                         ),
@@ -367,13 +406,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     SizedBox(height: 24.h),
 
-                    // --- 5. PASSWORD FIELDS ---
+                    // --- PASSWORD ---
                     AppTextField(
                       controller: _passwordController,
                       label: 'Password',
                       prefixIcon: Icons.lock_outline,
                       isPassword: true,
-                      validator: (value) => (value?.length ?? 0) > 5 ? null : 'Min 6 characters',
+                      validator: (value) =>
+                      (value?.length ?? 0) > 5 ? null : 'Min 6 characters',
                     ),
                     SizedBox(height: 16.h),
 
@@ -383,27 +423,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       prefixIcon: Icons.lock_outline,
                       isPassword: true,
                       validator: (value) {
-                        if (value != _passwordController.text) return 'Passwords do not match';
+                        if (value != _passwordController.text) {
+                          return 'Passwords do not match';
+                        }
                         return null;
                       },
                     ),
 
                     SizedBox(height: 40.h),
 
-                    // --- 6. SUBMIT BUTTON ---
+                    // --- SUBMIT ---
                     SizedBox(
                       height: 56.h,
                       child: FilledButton(
                         onPressed: _isLoading ? null : _register,
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.primary,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16)),
                         ),
                         child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
+                            ? const CircularProgressIndicator(
+                            color: Colors.white)
                             : Text(
                           'Create Account',
-                          style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
@@ -415,7 +461,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         child: RichText(
                           textAlign: TextAlign.center,
                           text: TextSpan(
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
                               color: AppColors.textSecondary,
                               fontSize: 14.sp,
                             ),

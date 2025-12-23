@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../../app/di/service_locator.dart';
 import '../../../../../core/constants/app_colors.dart';
@@ -58,7 +57,8 @@ class _EventCatalogScreenState extends State<EventCatalogScreen> {
                               border: Border.all(color: AppColors.border),
                             ),
                             child: IconButton(
-                              icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                              icon: const Icon(Icons.arrow_back,
+                                  color: AppColors.textPrimary),
                               onPressed: () => context.pop(),
                             ),
                           ),
@@ -72,14 +72,18 @@ class _EventCatalogScreenState extends State<EventCatalogScreen> {
                           hintText: 'Search events...',
                           onSearch: (query) async {
                             if (query.isEmpty) return [];
-                            final events = await _eventRepository.getEventsStream().first;
+                            final events =
+                                await _eventRepository.getEventsStream().first;
                             return events
-                                .where((e) => e.title.toLowerCase().contains(query.toLowerCase()))
+                                .where((e) => e.title
+                                    .toLowerCase()
+                                    .contains(query.toLowerCase()))
                                 .map((e) => e.title)
                                 .take(5)
                                 .toList();
                           },
-                          onSubmit: (query) => setState(() => _searchQuery = query),
+                          onSubmit: (query) =>
+                              setState(() => _searchQuery = query),
                         ),
                       ),
 
@@ -90,17 +94,23 @@ class _EventCatalogScreenState extends State<EventCatalogScreen> {
                         padding: const EdgeInsets.only(top: 4.0),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: _showPastEvents ? AppColors.primary : Colors.white,
+                            color: _showPastEvents
+                                ? AppColors.primary
+                                : Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: AppColors.border),
                           ),
                           child: IconButton(
                             icon: Icon(
                               Icons.history,
-                              color: _showPastEvents ? Colors.white : Colors.grey,
+                              color:
+                                  _showPastEvents ? Colors.white : Colors.grey,
                             ),
-                            tooltip: _showPastEvents ? 'Showing Past Events' : 'Show History',
-                            onPressed: () => setState(() => _showPastEvents = !_showPastEvents),
+                            tooltip: _showPastEvents
+                                ? 'Showing Past Events'
+                                : 'Show History',
+                            onPressed: () => setState(
+                                () => _showPastEvents = !_showPastEvents),
                           ),
                         ),
                       ),
@@ -117,7 +127,7 @@ class _EventCatalogScreenState extends State<EventCatalogScreen> {
                           label: Text('Search: "$_searchQuery"'),
                           deleteIcon: const Icon(Icons.close, size: 18),
                           onDeleted: () => setState(() => _searchQuery = ''),
-                          backgroundColor: AppColors.primary.withOpacity(0.1),
+                          backgroundColor: AppColors.primary.withValues(alpha:0.1),
                         ),
                       ),
                     ),
@@ -130,9 +140,15 @@ class _EventCatalogScreenState extends State<EventCatalogScreen> {
                     child: Row(
                       children: [
                         FilterChipGroup(
-                          filters: const ['All', 'Technical', 'Cultural', 'Sports'],
+                          filters: const [
+                            'All',
+                            'Technical',
+                            'Cultural',
+                            'Sports'
+                          ],
                           activeFilter: _activeCategoryFilter,
-                          onSelected: (value) => setState(() => _activeCategoryFilter = value),
+                          onSelected: (value) =>
+                              setState(() => _activeCategoryFilter = value),
                         ),
                         const SizedBox(width: 12),
                         Container(
@@ -143,12 +159,18 @@ class _EventCatalogScreenState extends State<EventCatalogScreen> {
                             border: Border.all(color: AppColors.border),
                           ),
                           child: PopupMenuButton<SortOption>(
-                            icon: const Icon(Icons.sort, size: 20, color: AppColors.textSecondary),
+                            icon: const Icon(Icons.sort,
+                                size: 20, color: AppColors.textSecondary),
                             tooltip: 'Sort Events',
-                            onSelected: (value) => setState(() => _currentSort = value),
+                            onSelected: (value) =>
+                                setState(() => _currentSort = value),
                             itemBuilder: (context) => [
-                              const PopupMenuItem(value: SortOption.newest, child: Text('Newest')),
-                              const PopupMenuItem(value: SortOption.popular, child: Text('Popular')),
+                              const PopupMenuItem(
+                                  value: SortOption.newest,
+                                  child: Text('Newest')),
+                              const PopupMenuItem(
+                                  value: SortOption.popular,
+                                  child: Text('Popular')),
                             ],
                           ),
                         ),
@@ -162,9 +184,9 @@ class _EventCatalogScreenState extends State<EventCatalogScreen> {
                   Text(
                     _showPastEvents ? "Event History" : "Upcoming Events",
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textSecondary,
-                    ),
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textSecondary,
+                        ),
                   ),
                   const SizedBox(height: AppSizes.sm),
                 ]),
@@ -177,10 +199,12 @@ class _EventCatalogScreenState extends State<EventCatalogScreen> {
               stream: _eventRepository.getEventsStream(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const SliverFillRemaining(child: Center(child: CircularProgressIndicator()));
+                  return const SliverFillRemaining(
+                      child: Center(child: CircularProgressIndicator()));
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const SliverFillRemaining(child: Center(child: Text("No events available.")));
+                  return const SliverFillRemaining(
+                      child: Center(child: Text("No events available.")));
                 }
 
                 // Filtering Logic
@@ -189,17 +213,24 @@ class _EventCatalogScreenState extends State<EventCatalogScreen> {
                   // --- FIX: SECURITY FILTER ---
                   // Only show Approved events.
                   // (Optional: You might want to allow cancelled events to show in history)
-                  if (event.approvalStatus != EventStatus.approved) return false;
+                  if (event.approvalStatus != EventStatus.approved) {
+                    return false;
+                  }
                   // ----------------------------
 
                   // Category
-                  if (_activeCategoryFilter != 'All' && event.category != _activeCategoryFilter) return false;
+                  if (_activeCategoryFilter != 'All' &&
+                      event.category != _activeCategoryFilter) {
+                    return false;
+                  }
 
                   // Search
                   if (_searchQuery.isNotEmpty) {
                     final q = _searchQuery.toLowerCase();
                     if (!event.title.toLowerCase().contains(q) &&
-                        !event.description.toLowerCase().contains(q)) return false;
+                        !event.description.toLowerCase().contains(q)) {
+                      return false;
+                    }
                   }
 
                   // Time (History vs Upcoming)
@@ -214,7 +245,8 @@ class _EventCatalogScreenState extends State<EventCatalogScreen> {
                       ? b.startTime.compareTo(a.startTime)
                       : a.startTime.compareTo(b.startTime));
                 } else {
-                  filteredEvents.sort((a, b) => b.registeredCount.compareTo(a.registeredCount));
+                  filteredEvents.sort(
+                      (a, b) => b.registeredCount.compareTo(a.registeredCount));
                 }
 
                 if (filteredEvents.isEmpty) {
@@ -223,7 +255,12 @@ class _EventCatalogScreenState extends State<EventCatalogScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(_showPastEvents ? Icons.history : Icons.event_busy, size: 60, color: Colors.grey[300]),
+                          Icon(
+                              _showPastEvents
+                                  ? Icons.history
+                                  : Icons.event_busy,
+                              size: 60,
+                              color: Colors.grey[300]),
                           const SizedBox(height: 16),
                           Text(
                             _showPastEvents
@@ -241,11 +278,13 @@ class _EventCatalogScreenState extends State<EventCatalogScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
-                          (context, index) => Padding(
+                      (context, index) => Padding(
                         padding: const EdgeInsets.only(bottom: 16.0),
                         child: EventCard(
                           event: filteredEvents[index],
-                          onTap: () => context.push('${AppRoutes.events}/details', extra: filteredEvents[index]),
+                          onTap: () => context.push(
+                              '${AppRoutes.events}/details',
+                              extra: filteredEvents[index]),
                         ),
                       ),
                       childCount: filteredEvents.length,

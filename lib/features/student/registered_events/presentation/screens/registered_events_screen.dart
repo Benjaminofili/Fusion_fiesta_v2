@@ -37,7 +37,7 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
   }
 
   Future<void> _loadUser() async {
-    final user = await _authService.currentUser;
+    final user = _authService.currentUser;
     if (mounted) setState(() => _userId = user?.id);
   }
 
@@ -51,7 +51,8 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
         contentPadding: EdgeInsets.all(24.w),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -71,7 +72,6 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
               style: TextStyle(fontSize: 14.sp, color: AppColors.textSecondary),
             ),
             SizedBox(height: 24.h),
-
             SizedBox(
               width: 180.w,
               height: 200.h,
@@ -79,7 +79,6 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
                 child: QrPass(data: 'TICKET|${event.id}|$_userId'),
               ),
             ),
-
             SizedBox(height: 24.h),
             SizedBox(
               width: double.infinity,
@@ -115,7 +114,8 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
           ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back_ios_new,
+              color: AppColors.textPrimary),
           onPressed: () => context.pop(),
         ),
         bottom: TabBar(
@@ -132,24 +132,29 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
         stream: _eventRepository.getEventsStream(),
         builder: (context, eventSnapshot) {
           if (!eventSnapshot.hasData) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+            return const Center(
+                child: CircularProgressIndicator(color: AppColors.primary));
           }
 
           return StreamBuilder<List<String>>(
             stream: _eventRepository.getRegisteredEventIdsStream(_userId!),
             builder: (context, idSnapshot) {
               if (!idSnapshot.hasData) {
-                return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+                return const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary));
               }
 
               final allEvents = eventSnapshot.data!;
               final registeredIds = idSnapshot.data!;
 
-              final myEvents = allEvents.where((e) => registeredIds.contains(e.id)).toList();
+              final myEvents =
+                  allEvents.where((e) => registeredIds.contains(e.id)).toList();
 
               final now = DateTime.now();
-              final upcoming = myEvents.where((e) => e.startTime.isAfter(now)).toList();
-              final past = myEvents.where((e) => e.startTime.isBefore(now)).toList();
+              final upcoming =
+                  myEvents.where((e) => e.startTime.isAfter(now)).toList();
+              final past =
+                  myEvents.where((e) => e.startTime.isBefore(now)).toList();
 
               return TabBarView(
                 controller: _tabController,
@@ -172,7 +177,9 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              isUpcoming ? FontAwesomeIcons.calendarXmark : FontAwesomeIcons.boxOpen,
+              isUpcoming
+                  ? FontAwesomeIcons.calendarXmark
+                  : FontAwesomeIcons.boxOpen,
               size: 60.sp,
               color: Colors.grey[300],
             ),
@@ -189,7 +196,8 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
                 label: const Text('Explore Events'),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
                 ),
               )
             ]
@@ -208,12 +216,15 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
         return StreamBuilder<List<Registration>>(
             stream: _eventRepository.getEventRegistrationsStream(event.id),
             builder: (context, regSnapshot) {
-
               // Find current user's registration
               final myReg = regSnapshot.data?.firstWhere(
-                      (r) => r.userId == _userId,
-                  orElse: () => Registration(id: '', eventId: '', userId: '', status: 'pending', createdAt: DateTime.now())
-              );
+                  (r) => r.userId == _userId,
+                  orElse: () => Registration(
+                      id: '',
+                      eventId: '',
+                      userId: '',
+                      status: 'pending',
+                      createdAt: DateTime.now()));
 
               final status = myReg?.status ?? 'pending';
               final isApproved = status == 'approved';
@@ -232,7 +243,9 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
                       children: [
                         EventCard(
                           event: event,
-                          onTap: () => context.push('${AppRoutes.events}/details', extra: event),
+                          onTap: () => context.push(
+                              '${AppRoutes.events}/details',
+                              extra: event),
                         ),
 
                         // --- STATUS BADGE (Top Left) ---
@@ -241,20 +254,26 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
                             top: 12,
                             left: 12,
                             child: Container(
-                              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 10.w, vertical: 6.h),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(8),
-                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)],
+                                boxShadow: [
+                                  BoxShadow(
+                                      color: Colors.black.withValues(alpha:0.1),
+                                      blurRadius: 4)
+                                ],
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
-                                      isApproved ? Icons.check_circle : Icons.hourglass_top,
+                                      isApproved
+                                          ? Icons.check_circle
+                                          : Icons.hourglass_top,
                                       size: 14.sp,
-                                      color: statusColor
-                                  ),
+                                      color: statusColor),
                                   SizedBox(width: 6.w),
                                   Text(
                                     status.toUpperCase(),
@@ -279,7 +298,8 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
                               ),
                               alignment: Alignment.center,
                               child: Container(
-                                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 16.w, vertical: 8.h),
                                 decoration: BoxDecoration(
                                   color: Colors.black54,
                                   borderRadius: BorderRadius.circular(20.r),
@@ -309,7 +329,8 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
                           label: const Text('View Digital Pass'),
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: AppColors.primary),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12.r)),
                             padding: EdgeInsets.symmetric(vertical: 12.h),
                           ),
                           onPressed: () => _showTicketDialog(context, event),
@@ -321,18 +342,23 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
                         margin: EdgeInsets.only(top: 8.h),
                         padding: EdgeInsets.all(12.h),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
+                          color: Colors.orange.withValues(alpha:0.1),
                           borderRadius: BorderRadius.circular(12.r),
-                          border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                          border:
+                              Border.all(color: Colors.orange.withValues(alpha:0.3)),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.info_outline, size: 16.sp, color: Colors.orange[800]),
+                            Icon(Icons.info_outline,
+                                size: 16.sp, color: Colors.orange[800]),
                             SizedBox(width: 8.w),
                             Text(
                               'Awaiting Organizer Approval',
-                              style: TextStyle(color: Colors.orange[800], fontSize: 12.sp, fontWeight: FontWeight.w500),
+                              style: TextStyle(
+                                  color: Colors.orange[800],
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
@@ -340,8 +366,7 @@ class _RegisteredEventsScreenState extends State<RegisteredEventsScreen>
                   ],
                 ),
               ).animate().fadeIn(delay: (50 * index).ms).slideY(begin: 0.1);
-            }
-        );
+            });
       },
     );
   }

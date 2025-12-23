@@ -3,7 +3,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../app/di/service_locator.dart';
 import '../../data/repositories/notification_repository.dart';
 import '../../data/models/app_notification.dart';
-import '../constants/app_colors.dart';
 import '../services/auth_service.dart';
 
 class NotificationBadge extends StatelessWidget {
@@ -20,7 +19,8 @@ class NotificationBadge extends StatelessWidget {
     if (userId == null) return child;
 
     return StreamBuilder<List<AppNotification>>(
-      stream: serviceLocator<NotificationRepository>().getNotificationsStream(userId),
+      stream: serviceLocator<NotificationRepository>()
+          .getNotificationsStream(userId),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return child;
 

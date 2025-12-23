@@ -4,4 +4,3 @@ enum AppRole {
   organizer,
   admin,
 }
-

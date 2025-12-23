@@ -21,7 +21,7 @@ class AuthService extends ChangeNotifier {
 
   // NEW: Initialize method to load user from disk on startup
   Future<void> init() async {
-    final storedUser = await _storageService.getUser();
+    final storedUser = _storageService.getUser();
     if (storedUser != null) {
       _currentUser = storedUser;
       _userController.add(_currentUser);
@@ -57,7 +57,7 @@ class AuthService extends ChangeNotifier {
     await _storageService.clearUser();
 
     _userController.add(null); // Update streams
-    notifyListeners();         // Update Router
+    notifyListeners(); // Update Router
   }
 
   // Helper to centralize session saving
@@ -66,10 +66,11 @@ class AuthService extends ChangeNotifier {
     await _storageService.saveUser(user);
 
     _userController.add(user); // Update streams
-    notifyListeners();         // Update Router
+    notifyListeners(); // Update Router
   }
 
-  Future<void> changePassword(String currentPassword, String newPassword) async {
+  Future<void> changePassword(
+      String currentPassword, String newPassword) async {
     final user = _currentUser;
     if (user == null) throw Exception('No user logged in');
 
