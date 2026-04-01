@@ -5,22 +5,29 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+configurations.all {
+    resolutionStrategy {
+        force("androidx.browser:browser:1.8.0")
+        force("androidx.activity:activity-ktx:1.9.3")
+        force("androidx.activity:activity:1.9.3")
+        force("androidx.core:core-ktx:1.13.1")
+        force("androidx.core:core:1.13.1")
+        force("androidx.navigationevent:navigationevent-android:1.0.0")
+    }
+}
+
 android {
     namespace = "com.example.fusion_fiesta"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.0.12077973" // Ensure this matches your installed NDK or remove if not needed
+    compileSdk = 36
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         // 1. Enable Core Library Desugaring (Required for Local Notifications)
         isCoreLibraryDesugaringEnabled = true
 
-        // 2. Set Java Compatibility to Java 8 (Standard for Flutter)
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-
-    kotlinOptions {
-        jvmTarget = "1.8"
+        // 2. Set Java Compatibility (Modern for Flutter)
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     defaultConfig {
@@ -54,4 +61,10 @@ dependencies {
 
     // Add MultiDex if enabled above
     implementation("androidx.multidex:multidex:2.0.1")
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }
