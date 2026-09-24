@@ -6,6 +6,10 @@
 ![Dart](https://img.shields.io/badge/dart-%230175C2.svg?style=for-the-badge&logo=dart&logoColor=white)
 ![State Management](https://img.shields.io/badge/State_Management-Streams_%26_Repository-success?style=for-the-badge)
 
+## Project status
+
+The current application uses simulated/mock repositories for its data layer (see `lib/mock/`) — there is no live backend yet. [BACKEND_SPECS.md](BACKEND_SPECS.md) documents the planned API and database design for replacing the mock repositories with a persistent server implementation.
+
 ## 📱 Screenshots
 
  <img width="792" height="1793" alt="image" src="https://github.com/user-attachments/assets/9e86a7d5-27de-4948-ae06-0e574f468ebb" />  <img width="792" height="1793" alt="image" src="https://github.com/user-attachments/assets/ff71fea6-a5c3-45d1-9b2e-2bbc0531a428" />  <img width="792" height="1793" alt="image" src="https://github.com/user-attachments/assets/c1832ba7-c182-4584-9946-ec92a56e63e5" /> <img width="792" height="1793" alt="image" src="https://github.com/user-attachments/assets/90e9f160-aebe-415d-ad00-e24d92fe25b5" />
@@ -16,7 +20,7 @@
 
 ## ✨ Key Features
 
-The application implements a strict **Role-Based Access Control (RBAC)** system:
+The application implements **role-based application flows** for Students, Organizers, and Administrators, each with their own navigation and screens:
 
 ### 🎓 Student (Participant)
 * **Event Catalog:** Browse events with advanced filtering (Technical, Cultural, Sports).
@@ -46,7 +50,7 @@ This project follows a **Feature-First, Clean Architecture** approach to ensure 
 * **Framework:** [Flutter](https://flutter.dev/) (Dart)
 * **Routing:** `go_router` for robust navigation and deep linking.
 * **Dependency Injection:** `get_it` for service location.
-* **Local Storage:** `hive` for secure, offline-first session management.
+* **Local Storage:** `hive` for local session storage.
 * **State Management:** Reactive Repository Pattern using Dart `Stream` and `StreamBuilder`.
 * **UI/UX:** `flutter_screenutil` for responsiveness, `flutter_animate` for micro-interactions, and Lottie animations.
 * **Hardware Integration:** `mobile_scanner` (Camera), `url_launcher`, and File System access.
